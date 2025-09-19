@@ -45,7 +45,7 @@ docs = [
 ]
 
 [project.urls]
-Repository = "https://github.com/auto-exploit/ghsa-client.git"
+Repository = "https://github.com/valmarelox/ghsa-client.git"
 
 [project.scripts]
 

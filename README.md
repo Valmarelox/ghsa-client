@@ -177,7 +177,7 @@ except requests.RequestException as e:
 ### Setup
 
 ```bash
-git clone https://github.com/auto-exploit/ghsa-client.git
+git clone https://github.com/valmarelox/ghsa-client.git
 cd ghsa-client
 pip install -e ".[dev]"
 ```
@@ -207,8 +207,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/auto-exploit/ghsa-client).
+Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/valmarelox/ghsa-client).
 
 ## Changelog
 
-See the [releases page](https://github.com/auto-exploit/ghsa-client/releases) for a history of changes.
+See the [releases page](https://github.com/valmarelox/ghsa-client/releases) for a history of changes.
