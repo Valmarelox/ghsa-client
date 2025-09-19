@@ -45,7 +45,8 @@ class GHSAClient:
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         elif GITHUB_TOKEN := os.getenv("GITHUB_TOKEN"):
-            headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+            if GITHUB_TOKEN.strip():  # Only set if token is not empty
+                headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
         self.session.headers.update(headers)
 
@@ -119,16 +120,8 @@ class GHSAClient:
 
     def wait_for_ratelimit(self) -> None:
         """Wait for rate limit reset."""
-        # Only check rate limit if we have authentication
-        if "Authorization" not in self.session.headers:
+        ratelimit = self.get_ratelimit_remaining()
+        if ratelimit["resources"]["core"]["remaining"] > 0:
             return
-            
-        try:
-            ratelimit = self.get_ratelimit_remaining()
-            if ratelimit["resources"]["core"]["remaining"] > 0:
-                return
-            reset_time = ratelimit["resources"]["core"]["reset"]
-            sleep(reset_time - time())
-        except requests.HTTPError:
-            # If we can't check rate limit, just continue
-            pass
+        reset_time = ratelimit["resources"]["core"]["reset"]
+        sleep(reset_time - time())
