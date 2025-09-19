@@ -119,8 +119,16 @@ class GHSAClient:
 
     def wait_for_ratelimit(self) -> None:
         """Wait for rate limit reset."""
-        ratelimit = self.get_ratelimit_remaining()
-        if ratelimit["resources"]["core"]["remaining"] > 0:
+        # Only check rate limit if we have authentication
+        if "Authorization" not in self.session.headers:
             return
-        reset_time = ratelimit["resources"]["core"]["reset"]
-        sleep(reset_time - time())
+            
+        try:
+            ratelimit = self.get_ratelimit_remaining()
+            if ratelimit["resources"]["core"]["remaining"] > 0:
+                return
+            reset_time = ratelimit["resources"]["core"]["reset"]
+            sleep(reset_time - time())
+        except requests.HTTPError:
+            # If we can't check rate limit, just continue
+            pass
