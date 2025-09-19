@@ -45,8 +45,7 @@ class GHSAClient:
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
         elif GITHUB_TOKEN := os.getenv("GITHUB_TOKEN"):
-            if GITHUB_TOKEN.strip():  # Only set if token is not empty
-                headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
+            headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
         self.session.headers.update(headers)
 
