@@ -2,7 +2,11 @@
 
 from .ghsa_id import GHSA_ID, InvalidGHSAIDError
 from .advisory import Advisory, NoSourceCodeLocationFound
-from .base import CVE_ID, CVSS, CVSSVector, Package, Vulnerability, GitCommit, VersionPredicate
+from .cve_id import CVE_ID
+from .cvss import CVSS, CVSSVector
+from .package import Package
+from .vulnerability import Vulnerability
+from .version import VersionPredicate
 
 __all__ = [
     "GHSA_ID", 
@@ -14,6 +18,5 @@ __all__ = [
     "CVSSVector",
     "Package",
     "Vulnerability",
-    "GitCommit",
     "VersionPredicate",
 ]

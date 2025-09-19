@@ -103,7 +103,8 @@ class GHSAClient:
             if 'link' not in response.headers:
                 break
             url_match = re.match(r'<(.*)>; rel="next"', response.headers['link'])
-            assert url_match is not None
+            if url_match is None:
+                break
             url = url_match.group(1)
 
     def get_all_advisories_for_year(self, year: int) -> list[Advisory]:

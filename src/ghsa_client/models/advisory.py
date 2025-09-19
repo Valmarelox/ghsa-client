@@ -4,7 +4,10 @@ from typing import Optional, Any
 from pydantic import BaseModel, field_validator, computed_field, model_validator
 
 from .ghsa_id import GHSA_ID
-from .base import CVE_ID, Vulnerability, CVSS, Package, GitCommit
+from .cve_id import CVE_ID
+from .vulnerability import Vulnerability
+from .cvss import CVSS
+from .package import Package
 
 
 class NoSourceCodeLocationFound(Exception):

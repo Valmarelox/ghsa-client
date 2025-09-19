@@ -112,21 +112,25 @@ class TestGHSAClient:
             }
         ]
         mock_page1_response.raise_for_status.return_value = None
+        mock_page1_response.headers = {
+            'link': '<https://api.github.com/advisories?page=2>; rel="next"'
+        }
         
         # Mock second page response (empty)
         mock_page2_response = MagicMock()
         mock_page2_response.json.return_value = []
         mock_page2_response.raise_for_status.return_value = None
+        mock_page2_response.headers = {}
         
         # Configure mock to return different responses for different URLs
         def side_effect(*args: object, **kwargs: object) -> MagicMock:
             url = str(args[0]) if args else ""
             if "rate_limit" in url:
                 return mock_rate_limit_response
-            elif kwargs.get('params', {}).get('page') == 1:
-                return mock_page1_response
-            else:
+            elif "page=2" in url:
                 return mock_page2_response
+            else:
+                return mock_page1_response
         
         mock_get.side_effect = side_effect
         

@@ -207,8 +207,8 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 ## Contributing
 
-Contributions are welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+Contributions are welcome! Please open an issue or pull request on [GitHub](https://github.com/auto-exploit/ghsa-client).
 
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md) for a history of changes.
+See the [releases page](https://github.com/auto-exploit/ghsa-client/releases) for a history of changes.
