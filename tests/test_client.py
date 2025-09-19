@@ -183,3 +183,17 @@ class TestGHSAClient:
         # Test that it yields no results when empty
         advisories = list(result)
         assert len(advisories) == 0
+    
+    def test_get_specific_advisory_real(self) -> None:
+        """Test getting a specific real advisory (GHSA-8r8j-xvfj-36f9)."""
+        logger = logging.getLogger(__name__)
+        client = GHSAClient(logger=logger)
+        
+        # Test with a real GHSA ID that was reported as problematic
+        ghsa_id = GHSA_ID("GHSA-8r8j-xvfj-36f9")
+        advisory = client.get_advisory(ghsa_id)
+        
+        assert advisory.ghsa_id.id == "GHSA-8r8j-xvfj-36f9"
+        assert advisory.summary == "Code injection in ymlref"
+        assert advisory.severity == "critical"
+        assert advisory.published_at == "2018-12-19T19:25:14Z"
