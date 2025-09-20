@@ -67,7 +67,7 @@ class SemanticVersion(BaseModel):
 
     def matches_predicate(self, predicate: "VersionPredicate") -> bool:
         """Check if this version matches a version predicate."""
-        return self.version_info.match(str(predicate.semver))
+        return self.version_info.match(str(predicate))
 
     @property
     def variations(self) -> list[str]:
