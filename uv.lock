@@ -327,9 +327,10 @@ wheels = [
 
 [[package]]
 name = "ghsa-client"
-version = "1.0.3"
+version = "1.0.4"
 source = { editable = "." }
 dependencies = [
+    { name = "packaging" },
     { name = "pydantic" },
     { name = "requests" },
     { name = "semver" },
@@ -356,6 +357,7 @@ requires-dist = [
     { name = "mkdocs", marker = "extra == 'docs'", specifier = ">=1.4.0" },
     { name = "mkdocs-material", marker = "extra == 'docs'", specifier = ">=9.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.0.0" },
+    { name = "packaging", specifier = ">=21.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.0.0" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },

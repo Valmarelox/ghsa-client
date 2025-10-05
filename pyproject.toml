@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ghsa-client"
-version = "1.0.3"
+version = "1.0.4"
 description = "A Python client library for the GitHub Security Advisory (GHSA) API"
 readme = "README.md"
 license = {text = "MIT"}
@@ -28,6 +28,7 @@ dependencies = [
     "pydantic>=2.0.0",
     "requests>=2.25.0",
     "semver>=2.13.0",
+    "packaging>=21.0.0",
 ]
 
 [project.optional-dependencies]
