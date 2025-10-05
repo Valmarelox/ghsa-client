@@ -4,31 +4,6 @@ import pytest
 from ghsa_client.models.version import SemanticVersion, VersionPredicate, VersionFormat
 
 
-class TestVersionFormat:
-    """Test version format detection."""
-
-    def test_detect_semver_format(self) -> None:
-        """Test detection of semver format."""
-        assert SemanticVersion.detect_format("1.0.0") == VersionFormat.SEMVER
-        assert SemanticVersion.detect_format("1.0.0-alpha.1") == VersionFormat.SEMVER
-        assert SemanticVersion.detect_format("1.0.0+build.1") == VersionFormat.SEMVER
-        assert SemanticVersion.detect_format("v1.0.0") == VersionFormat.SEMVER
-
-    def test_detect_pypi_format(self) -> None:
-        """Test detection of PyPI format."""
-        assert SemanticVersion.detect_format("1.0.0a1") == VersionFormat.PYPI
-        assert SemanticVersion.detect_format("1.0.0b1") == VersionFormat.PYPI
-        assert SemanticVersion.detect_format("1.0.0rc1") == VersionFormat.PYPI
-        assert SemanticVersion.detect_format("1.0.0.post1") == VersionFormat.PYPI
-        assert SemanticVersion.detect_format("1.0.0.dev1") == VersionFormat.PYPI
-        assert SemanticVersion.detect_format("1!2.0.0") == VersionFormat.PYPI
-        assert SemanticVersion.detect_format("1.0.0.1") == VersionFormat.PYPI
-
-    def test_detect_unknown_format(self) -> None:
-        """Test detection of unknown format."""
-        assert SemanticVersion.detect_format("invalid-version") == VersionFormat.UNKNOWN
-
-
 class TestSemanticVersion:
     """Test enhanced SemanticVersion class."""
 
@@ -243,6 +218,7 @@ class TestVersionPredicate:
         predicate = VersionPredicate.from_str(">=4.2")
         assert predicate != None
         assert predicate.version == "4.2.0"  # Should be normalized
+        assert predicate.semver == SemanticVersion.parse("4.2.0")
 
 
 class TestVersionIntegration:

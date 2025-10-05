@@ -45,42 +45,6 @@ class SemanticVersion(BaseModel):
             else str(self)
         )
 
-    @classmethod
-    def detect_format(cls, version: str) -> VersionFormat:
-        """Detect the version format (semver or PyPI)."""
-        # Remove prefix for detection
-        clean_version = version
-        match = re.match("^((?:.+@)?v|V)(.*)", version)
-        if match:
-            clean_version = match.group(2)
-        
-        # PyPI version patterns
-        pypi_patterns = [
-            r'^\d+!',  # Epoch
-            r'\.post\d+',  # Post-release
-            r'\.dev\d+',  # Development release
-            r'[a-zA-Z]\d+$',  # Pre-release like a1, b1, rc1
-            r'^\d+\.\d+\.\d+\.\d+',  # Four-part version
-        ]
-        
-        # Check for PyPI patterns
-        for pattern in pypi_patterns:
-            if re.search(pattern, clean_version):
-                return VersionFormat.PYPI
-        
-        # Try to parse as semver first
-        try:
-            VersionInfo.parse(clean_version, optional_minor_and_patch=True)
-            return VersionFormat.SEMVER
-        except ValueError:
-            pass
-        
-        # Try to parse as PyPI
-        try:
-            PyPIVersion(clean_version)
-            return VersionFormat.PYPI
-        except Exception:
-            return VersionFormat.UNKNOWN
 
     @classmethod
     def parse(cls, version: str) -> "SemanticVersion":
@@ -92,16 +56,21 @@ class SemanticVersion(BaseModel):
             prefix = match.group(1)
             version = match.group(2)
 
-        # Detect version format
-        version_format = cls.detect_format(original_version)
-        
-        if version_format == VersionFormat.PYPI:
-            return cls._parse_pypi(version, prefix, original_version)
-        elif version_format == VersionFormat.SEMVER:
+        # Error-driven approach: try parsers in order until one works
+        # 1. Try semver first (most common)
+        try:
             return cls._parse_semver(version, prefix, original_version)
-        else:
-            # Fallback to original logic for backward compatibility
-            return cls._parse_legacy(version, prefix, original_version)
+        except ValueError:
+            pass
+        
+        # 2. Try PyPI format
+        try:
+            return cls._parse_pypi(version, prefix, original_version)
+        except ValueError:
+            pass
+        
+        # 3. Fallback to legacy parsing
+        return cls._parse_legacy(version, prefix, original_version)
 
     @classmethod
     def _parse_pypi(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
@@ -315,15 +284,12 @@ class VersionPredicate(BaseModel):
         if operator == "=":
             operator = "=="
 
-        # Detect version format and normalize the version
-        version_format = SemanticVersion.detect_format(version_str)
-        
         # Parse and normalize the version to ensure consistency
         try:
             normalized_version = SemanticVersion.parse(version_str)
             normalized_version_str = str(normalized_version.version_info)
             
-            return cls(operator=operator, version=normalized_version_str, version_format=version_format)
+            return cls(operator=operator, version=normalized_version_str, version_format=normalized_version.version_format)
         except ValueError as e:
             raise ValueError(f"Invalid version predicate format: {e}") from e
 
