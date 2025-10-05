@@ -305,7 +305,7 @@ class VersionPredicate(BaseModel):
         """Parse version predicate from string."""
         s = s.strip()
 
-        match = re.match(r"^(!=|<=|>=|<|>|=|==)\s*(.*)", s)
+        match = re.match(r"^(!=|<=|>=|<|>|==|=)\s*(.*)", s)
         if not match:
             raise ValueError("Invalid version predicate format")
 
@@ -315,11 +315,15 @@ class VersionPredicate(BaseModel):
         if operator == "=":
             operator = "=="
 
-        # Detect version format
+        # Detect version format and normalize the version
         version_format = SemanticVersion.detect_format(version_str)
-
+        
+        # Parse and normalize the version to ensure consistency
         try:
-            return cls(operator=operator, version=version_str, version_format=version_format)
+            normalized_version = SemanticVersion.parse(version_str)
+            normalized_version_str = str(normalized_version.version_info)
+            
+            return cls(operator=operator, version=normalized_version_str, version_format=version_format)
         except ValueError as e:
             raise ValueError(f"Invalid version predicate format: {e}") from e
 

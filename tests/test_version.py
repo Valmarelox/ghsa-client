@@ -166,6 +166,11 @@ class TestSemanticVersion:
         with pytest.raises(ValueError, match="Invalid version"):
             SemanticVersion.parse("invalid-version")
 
+    def test_none_semver(self) -> None:
+        """Test handling of None semver."""
+        version = SemanticVersion.parse("4.2")
+        assert version is not None
+        assert str(version) == "4.2.0"
 
 class TestVersionPredicate:
     """Test enhanced VersionPredicate class."""
@@ -181,7 +186,7 @@ class TestVersionPredicate:
         """Test parsing PyPI predicates."""
         predicate = VersionPredicate.from_str(">=1.0.0a1")
         assert predicate.operator == ">="
-        assert predicate.version == "1.0.0a1"
+        assert predicate.version == "1.0.0-alpha.1"  # Should be normalized to semver
         assert predicate.version_format == VersionFormat.PYPI
 
     def test_parse_predicate_with_spaces(self) -> None:
@@ -233,6 +238,11 @@ class TestVersionPredicate:
         predicate = VersionPredicate(operator="invalid", version="1.0.0")
         with pytest.raises(ValueError, match="Invalid operator"):
             predicate.operator_to_symbol()
+
+    def test_version_predicate(self) -> None:
+        predicate = VersionPredicate.from_str(">=4.2")
+        assert predicate != None
+        assert predicate.version == "4.2.0"  # Should be normalized
 
 
 class TestVersionIntegration:
