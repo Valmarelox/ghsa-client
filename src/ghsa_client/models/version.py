@@ -48,117 +48,94 @@ class SemanticVersion(BaseModel):
 
     @classmethod
     def parse(cls, version: str) -> "SemanticVersion":
-        # Extract prefix if present
+        """Parse version string using error-driven approach."""
         original_version = version
         prefix = ""
-        match = re.match("^((?:.+@)?v|V)(.*)", version)
-        if match:
+        
+        # Extract prefix if present
+        if match := re.match("^((?:.+@)?v|V)(.*)", version):
             prefix = match.group(1)
             version = match.group(2)
 
-        # Error-driven approach: try parsers in order until one works
-        # 1. Try semver first (most common)
-        try:
-            return cls._parse_semver(version, prefix, original_version)
-        except ValueError:
-            pass
+        # Try parsers in order of preference
+        for parser in [cls._parse_semver, cls._parse_pypi, cls._parse_legacy]:
+            try:
+                return parser(version, prefix, original_version)
+            except ValueError:
+                continue
         
-        # 2. Try PyPI format
-        try:
-            return cls._parse_pypi(version, prefix, original_version)
-        except ValueError:
-            pass
-        
-        # 3. Fallback to legacy parsing
-        return cls._parse_legacy(version, prefix, original_version)
+        raise ValueError(f"Invalid version: {version}")
 
     @classmethod
     def _parse_pypi(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
         """Parse PyPI version and convert to semver."""
-        try:
-            pypi_version = PyPIVersion(version)
-            
-            # Convert PyPI to semver format
-            major = pypi_version.major
-            minor = pypi_version.minor or 0
-            patch = pypi_version.micro or 0
-            
-            # Handle pre-release
-            prerelease = None
-            if pypi_version.pre:
-                pre_type, pre_num = pypi_version.pre
-                # Convert PyPI pre-release to semver format
-                if pre_type == 'a':
-                    prerelease = f"alpha.{pre_num}"
-                elif pre_type == 'b':
-                    prerelease = f"beta.{pre_num}"
-                elif pre_type == 'rc':
-                    prerelease = f"rc.{pre_num}"
-                else:
-                    prerelease = f"{pre_type}.{pre_num}"
-            
-            # Handle build metadata (dev releases become build metadata)
-            build = None
-            if pypi_version.dev:
-                build = f"dev.{pypi_version.dev}"
-            
-            # Handle post-release (convert to build metadata)
-            if pypi_version.post:
-                if build:
-                    build = f"{build}.post{pypi_version.post}"
-                else:
-                    build = f"post.{pypi_version.post}"
-            
-            # Create semver version
-            semver_version = VersionInfo(
-                major=major,
-                minor=minor,
-                patch=patch,
-                prerelease=prerelease,
-                build=build
-            )
-            
-            return cls(
-                semver_parts=semver_version.to_dict(),
-                prefix=prefix,
-                original_version=original_version,
-                version_format=VersionFormat.PYPI,
-            )
-        except Exception as e:
-            raise ValueError(f"Invalid PyPI version: {version}") from e
+        pypi_version = PyPIVersion(version)
+        
+        # Convert PyPI components to semver
+        prerelease = cls._convert_pypi_prerelease(pypi_version.pre)
+        build = cls._convert_pypi_build(pypi_version.dev, pypi_version.post)
+        
+        semver_version = VersionInfo(
+            major=pypi_version.major,
+            minor=pypi_version.minor or 0,
+            patch=pypi_version.micro or 0,
+            prerelease=prerelease,
+            build=build
+        )
+        
+        return cls(
+            semver_parts=semver_version.to_dict(),
+            prefix=prefix,
+            original_version=original_version,
+            version_format=VersionFormat.PYPI,
+        )
+
+    @classmethod
+    def _convert_pypi_prerelease(cls, pre: Optional[tuple]) -> Optional[str]:
+        """Convert PyPI prerelease to semver format."""
+        if not pre:
+            return None
+        
+        pre_type, pre_num = pre
+        pre_type_map = {'a': 'alpha', 'b': 'beta', 'rc': 'rc'}
+        return f"{pre_type_map.get(pre_type, pre_type)}.{pre_num}"
+
+    @classmethod
+    def _convert_pypi_build(cls, dev: Optional[int], post: Optional[int]) -> Optional[str]:
+        """Convert PyPI dev/post to semver build metadata."""
+        parts = []
+        if dev:
+            parts.append(f"dev.{dev}")
+        if post:
+            parts.append(f"post.{post}")
+        return ".".join(parts) if parts else None
 
     @classmethod
     def _parse_semver(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
         """Parse semver version."""
-        try:
-            semver_version = VersionInfo.parse(version, optional_minor_and_patch=True)
-            return cls(
-                semver_parts=semver_version.to_dict(),
-                prefix=prefix,
-                original_version=original_version,
-                version_format=VersionFormat.SEMVER,
-            )
-        except ValueError as e:
-            raise ValueError(f"Invalid semver version: {version}") from e
+        semver_version = VersionInfo.parse(version, optional_minor_and_patch=True)
+        return cls(
+            semver_parts=semver_version.to_dict(),
+            prefix=prefix,
+            original_version=original_version,
+            version_format=VersionFormat.SEMVER,
+        )
 
     @classmethod
     def _parse_legacy(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
         """Legacy parsing for backward compatibility."""
-        # TODO: Why is it here?
+        # Handle 4-part versions by converting to semver format
         if version.count(".") > 2:
             major, minor, patch, release = version.split(".", maxsplit=3)
             version = f"{major}.{minor}.{patch}-{release}"
 
-        try:
-            semver_version = VersionInfo.parse(version, optional_minor_and_patch=True)
-            return cls(
-                semver_parts=semver_version.to_dict(),
-                prefix=prefix,
-                original_version=original_version,
-                version_format=VersionFormat.UNKNOWN,
-            )
-        except ValueError as e:
-            raise ValueError(f"Invalid version: {version}") from e
+        semver_version = VersionInfo.parse(version, optional_minor_and_patch=True)
+        return cls(
+            semver_parts=semver_version.to_dict(),
+            prefix=prefix,
+            original_version=original_version,
+            version_format=VersionFormat.UNKNOWN,
+        )
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, SemanticVersion):
@@ -201,35 +178,37 @@ class SemanticVersion(BaseModel):
     def to_pypi(self) -> str:
         """Convert to PyPI version format."""
         version_info = self.version_info
-        
-        # Start with basic version
         pypi_version = f"{version_info.major}.{version_info.minor}.{version_info.patch}"
         
-        # Handle pre-release
+        # Add prerelease
         if version_info.prerelease:
-            prerelease = version_info.prerelease
-            # Convert semver pre-release to PyPI format
-            if prerelease.startswith("alpha."):
-                pypi_version += f"a{prerelease.split('.')[1]}"
-            elif prerelease.startswith("beta."):
-                pypi_version += f"b{prerelease.split('.')[1]}"
-            elif prerelease.startswith("rc."):
-                pypi_version += f"rc{prerelease.split('.')[1]}"
-            else:
-                # Keep as-is for other formats
-                pypi_version += f"-{prerelease}"
+            pypi_version += self._convert_semver_prerelease_to_pypi(version_info.prerelease)
         
-        # Handle build metadata (convert to dev release or post release)
+        # Add build metadata
         if version_info.build:
-            build = version_info.build
-            if build.startswith("dev."):
-                pypi_version += f".dev{build.split('.')[1]}"
-            elif build.startswith("post."):
-                pypi_version += f".post{build.split('.')[1]}"
-            else:
-                pypi_version += f"+{build}"
+            pypi_version += self._convert_semver_build_to_pypi(version_info.build)
         
         return pypi_version
+
+    def _convert_semver_prerelease_to_pypi(self, prerelease: str) -> str:
+        """Convert semver prerelease to PyPI format."""
+        if prerelease.startswith("alpha."):
+            return f"a{prerelease.split('.')[1]}"
+        elif prerelease.startswith("beta."):
+            return f"b{prerelease.split('.')[1]}"
+        elif prerelease.startswith("rc."):
+            return f"rc{prerelease.split('.')[1]}"
+        else:
+            return f"-{prerelease}"
+
+    def _convert_semver_build_to_pypi(self, build: str) -> str:
+        """Convert semver build metadata to PyPI format."""
+        if build.startswith("dev."):
+            return f".dev{build.split('.')[1]}"
+        elif build.startswith("post."):
+            return f".post{build.split('.')[1]}"
+        else:
+            return f"+{build}"
 
     def to_semver(self) -> str:
         """Convert to semver format."""
