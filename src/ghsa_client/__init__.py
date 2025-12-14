@@ -14,8 +14,8 @@ Main exports:
 """
 
 from .client import GHSAClient
-from .models import Advisory, GHSA_ID, CVE_ID, Vulnerability, CVSS
+from .models import Advisory, GHSA_ID, CVE_ID, Vulnerability, CVSS, Ecosystem
 from .exceptions import RateLimitExceeded
 
 __version__ = "1.0.1"
-__all__ = ["GHSAClient", "Advisory", "GHSA_ID", "CVE_ID", "Vulnerability", "CVSS", "RateLimitExceeded"]
+__all__ = ["GHSAClient", "Advisory", "GHSA_ID", "CVE_ID", "Vulnerability", "CVSS", "Ecosystem", "RateLimitExceeded"]

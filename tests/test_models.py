@@ -1,7 +1,7 @@
 """Tests for GHSA models."""
 
 import pytest
-from ghsa_client import GHSA_ID, Advisory
+from ghsa_client import Ecosystem, GHSA_ID, Advisory
 from ghsa_client.models import CVE_ID, InvalidGHSAIDError, Package, Vulnerability, VersionPredicate
 
 
@@ -50,7 +50,7 @@ class TestAdvisory:
     def test_advisory_creation(self) -> None:
         """Test advisory model creation."""
         ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
-        package = Package(name="test-package", ecosystem="npm")
+        package = Package(name="test-package", ecosystem=Ecosystem.NPM)
         vulnerability = Vulnerability(package=package)
         
         advisory = Advisory(
@@ -69,7 +69,7 @@ class TestAdvisory:
     def test_advisory_has_cve_property(self) -> None:
         """Test advisory has_cve property."""
         ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
-        package = Package(name="test-package", ecosystem="npm")
+        package = Package(name="test-package", ecosystem=Ecosystem.NPM)
         vulnerability = Vulnerability(package=package)
         
         # Advisory without CVE
