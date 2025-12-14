@@ -13,9 +13,11 @@ Main exports:
 - RateLimitExceeded: Exception raised when API rate limit is exceeded
 """
 
+from importlib.metadata import version
+
 from .client import GHSAClient
 from .models import Advisory, GHSA_ID, CVE_ID, Vulnerability, CVSS, Ecosystem
 from .exceptions import RateLimitExceeded
 
-__version__ = "1.0.1"
+__version__ = version("ghsa-client")
 __all__ = ["GHSAClient", "Advisory", "GHSA_ID", "CVE_ID", "Vulnerability", "CVSS", "Ecosystem", "RateLimitExceeded"]
