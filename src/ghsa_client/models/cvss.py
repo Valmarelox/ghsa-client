@@ -1,6 +1,6 @@
 # Python < 3.11 compatibility
 from enum import Enum
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, field_validator, model_validator
 
@@ -33,7 +33,7 @@ class CVSS(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_cvss_data(cls, data: Any) -> Optional[dict[str, str]]:
+    def validate_cvss_data(cls, data: Any) -> dict[str, str] | None:
         if isinstance(data, dict):
             # Handle API response format with vector_string and score
             if "vector_string" in data and data["vector_string"]:
@@ -78,5 +78,5 @@ class CVSS(BaseModel):
         return self.string
 
     @property
-    def version(self) -> Optional[str]:
+    def version(self) -> str | None:
         return self._parts.get("CVSS", None) if self._parts else None

@@ -3,7 +3,7 @@
 import re
 from enum import Enum
 from functools import total_ordering
-from typing import Any, Optional
+from typing import Any
 
 from packaging.version import Version as PyPIVersion
 from pydantic import BaseModel
@@ -93,7 +93,7 @@ class SemanticVersion(BaseModel):
         )
 
     @classmethod
-    def _convert_pypi_prerelease(cls, pre: Optional[tuple]) -> Optional[str]:
+    def _convert_pypi_prerelease(cls, pre: tuple | None) -> str | None:
         """Convert PyPI prerelease to semver format."""
         if not pre:
             return None
@@ -104,8 +104,8 @@ class SemanticVersion(BaseModel):
 
     @classmethod
     def _convert_pypi_build(
-        cls, dev: Optional[int], post: Optional[int]
-    ) -> Optional[str]:
+        cls, dev: int | None, post: int | None
+    ) -> str | None:
         """Convert PyPI dev/post to semver build metadata."""
         parts = []
         if dev:

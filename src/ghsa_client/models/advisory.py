@@ -1,6 +1,6 @@
 """Advisory model for GHSA operations."""
 
-from typing import Any, Optional
+from typing import Any
 
 from pydantic import BaseModel, computed_field, field_validator, model_validator
 
@@ -21,16 +21,16 @@ class Advisory(BaseModel):
     """Represents a GitHub Security Advisory (GHSA)."""
 
     ghsa_id: GHSA_ID
-    cve_id: Optional[CVE_ID] = None
+    cve_id: CVE_ID | None = None
     summary: str
     severity: str
     published_at: str
     vulnerabilities: list[Vulnerability]
-    description: Optional[str] = None
-    source_code_location: Optional[str] = None
-    cwes: Optional[list[str]] = None
+    description: str | None = None
+    source_code_location: str | None = None
+    cwes: list[str] | None = None
     references: list[str] = []
-    cvss: Optional[CVSS] = None
+    cvss: CVSS | None = None
 
     @field_validator("ghsa_id", mode="before")
     @classmethod
@@ -45,7 +45,7 @@ class Advisory(BaseModel):
 
     @field_validator("cve_id", mode="before")
     @classmethod
-    def validate_cve_id(cls, v: Any) -> Optional[CVE_ID]:
+    def validate_cve_id(cls, v: Any) -> CVE_ID | None:
         if v is None:
             return None
         if isinstance(v, str):
@@ -58,7 +58,7 @@ class Advisory(BaseModel):
 
     @field_validator("cwes", mode="before")
     @classmethod
-    def parse_cwes(cls, v: Any) -> Optional[list[str]]:
+    def parse_cwes(cls, v: Any) -> list[str] | None:
         if not v:
             return None
         cwes = []
@@ -73,7 +73,7 @@ class Advisory(BaseModel):
 
     @field_validator("cvss", mode="before")
     @classmethod
-    def parse_cvss(cls, v: Any, info: Any) -> Optional[CVSS]:
+    def parse_cvss(cls, v: Any, info: Any) -> CVSS | None:
         if not v:
             return None
         # Let the CVSS model handle the validation and parsing

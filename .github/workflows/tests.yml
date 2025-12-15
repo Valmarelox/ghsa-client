@@ -30,6 +30,7 @@ jobs:
 
       - name: Lint with ruff
         run: |
+          uv python pin ${{ matrix.python-version }}
           uvx ruff format --check .
           uvx ruff check .
 

@@ -5,7 +5,7 @@ import os
 import re
 from collections.abc import Generator
 from time import sleep, time
-from typing import Any, Optional, cast
+from typing import Any, cast
 
 import requests
 
@@ -18,7 +18,7 @@ class GHSAClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         *,
         blocking_rate_limit: bool = True,
         logger: logging.Logger = logging.getLogger(__name__),
