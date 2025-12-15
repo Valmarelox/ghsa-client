@@ -1,4 +1,3 @@
-
 # Python < 3.11 compatibility
 from enum import Enum
 from typing import Any, Optional
