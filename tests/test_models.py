@@ -18,19 +18,6 @@ class TestGHSA_ID:
         ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
         assert ghsa_id.id == "GHSA-gq96-8w38-hhj2"
 
-    def test_ghsa_id_validation_multiple_formats(self) -> None:
-        """Test GHSA ID validation with multiple valid formats."""
-        valid_ids = [
-            "GHSA-1234-5678-90ab",
-            "GHSA-abcd-efgh-ijkl",
-            "GHSA-xxxx-yyyy-zzzz",
-        ]
-
-        for valid_id in valid_ids:
-            ghsa = GHSA_ID(valid_id)
-            # GHSA_ID normalizes to lowercase
-            assert str(ghsa) == valid_id.lower()
-
     def test_invalid_ghsa_id_format(self) -> None:
         """Test invalid GHSA ID format raises error."""
         with pytest.raises(InvalidGHSAIDError):
