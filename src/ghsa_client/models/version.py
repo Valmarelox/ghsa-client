@@ -103,9 +103,7 @@ class SemanticVersion(BaseModel):
         return f"{pre_type_map.get(pre_type, pre_type)}.{pre_num}"
 
     @classmethod
-    def _convert_pypi_build(
-        cls, dev: int | None, post: int | None
-    ) -> str | None:
+    def _convert_pypi_build(cls, dev: int | None, post: int | None) -> str | None:
         """Convert PyPI dev/post to semver build metadata."""
         parts = []
         if dev:

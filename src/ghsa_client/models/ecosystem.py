@@ -10,11 +10,20 @@ class Ecosystem(StrEnum):
 
     PIP = "pip"
     NPM = "npm"
-    COMPOSER = "composer"
     MAVEN = "maven"
-    RUBYGEMS = "rubygems"
-    CARGO = "cargo"
     GO = "go"
+    COMPOSER = "composer"
+    PHP = "php"
+    RUBYGEMS = "rubygems"
+    PYTHON = "python"
+    CARGO = "cargo"
+    RUST = "rust"
+    NUGET = "nuget"
+    ERLANG = "erlang"
+    ACTIONS = "actions"
+    PUB = "pub"
+    SWIFT = "swift"
+    UNKNOWN = "unknown"
 
     @property
     def s3_key(self) -> str:
@@ -61,4 +70,14 @@ class Ecosystem(StrEnum):
                 return Language.PYTHON
             case Ecosystem.CARGO:
                 return Language.RUST
+            case Ecosystem.NUGET:
+                return Language.CSHARP
+            case Ecosystem.ERLANG:
+                return Language.ERLANG
+            case Ecosystem.ACTIONS:
+                return Language.ACTIONS
+            case Ecosystem.PUB:
+                return Language.FLUTTER
+            case Ecosystem.SWIFT:
+                return Language.SWIFT
         raise ValueError(f"No language found for ecosystem: {self}")
