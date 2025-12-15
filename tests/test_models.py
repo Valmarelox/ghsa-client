@@ -23,10 +23,30 @@ class TestGHSA_ID:
         with pytest.raises(InvalidGHSAIDError):
             GHSA_ID("invalid-id")
 
+    def test_invalid_ghsa_id_multiple_formats(self) -> None:
+        """Test GHSA ID validation with various invalid inputs."""
+        invalid_ids = [
+            "invalid-format",
+            "GHSA-12345-678-90ab",  # wrong length
+            "GHSA-123-5678-90ab",  # wrong length
+            "",
+            "GHSA-",
+        ]
+
+        for invalid_id in invalid_ids:
+            with pytest.raises((ValueError, InvalidGHSAIDError)):
+                GHSA_ID(invalid_id)
+
     def test_ghsa_id_string_conversion(self) -> None:
         """Test GHSA ID string conversion."""
         ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
         assert str(ghsa_id) == "GHSA-gq96-8w38-hhj2"
+
+    def test_ghsa_string_formatting(self) -> None:
+        """Test GHSA string formatting is consistent."""
+        ghsa = GHSA_ID("GHSA-1234-5678-90ab")
+        assert str(ghsa) == "GHSA-1234-5678-90ab"
+        assert repr(ghsa) == "GHSA_ID('GHSA-1234-5678-90ab')"
 
     def test_ghsa_id_equality(self) -> None:
         """Test GHSA ID equality."""
@@ -35,12 +55,34 @@ class TestGHSA_ID:
         assert ghsa_id1 == ghsa_id2
         assert ghsa_id1 == "GHSA-gq96-8w38-hhj2"
 
+    def test_ghsa_equality_and_hash(self) -> None:
+        """Test GHSA equality comparison and hashing."""
+        ghsa1 = GHSA_ID("GHSA-1234-5678-90ab")
+        ghsa2 = GHSA_ID("GHSA-1234-5678-90ab")
+        ghsa3 = GHSA_ID("GHSA-abcd-efgh-ijkl")
+
+        assert ghsa1 == ghsa2
+        assert ghsa1 != ghsa3
+        assert hash(ghsa1) == hash(ghsa2)
+
 
 class TestCVE_ID:
     def test_valid_cve_id(self) -> None:
         """Test valid CVE ID creation."""
         cve_id = CVE_ID("CVE-2024-12345")
         assert cve_id.id == "CVE-2024-12345"
+
+    def test_cve_id_validation_multiple_formats(self) -> None:
+        """Test CVE ID validation with multiple valid formats."""
+        valid_ids = [
+            "CVE-2023-1234",
+            "CVE-2024-56789",
+            "CVE-1999-0001",
+        ]
+
+        for valid_id in valid_ids:
+            cve = CVE_ID(valid_id)
+            assert str(cve) == valid_id
 
     def test_invalid_cve_id_format(self) -> None:
         """Test invalid CVE ID format raises error."""
@@ -51,6 +93,11 @@ class TestCVE_ID:
         """Test CVE ID string conversion."""
         cve_id = CVE_ID("CVE-2024-12345")
         assert str(cve_id) == "CVE-2024-12345"
+
+    def test_cve_string_formatting(self) -> None:
+        """Test CVE string formatting is consistent."""
+        cve = CVE_ID("CVE-2023-1234")
+        assert str(cve) == "CVE-2023-1234"
 
 
 class TestPackage:
@@ -63,7 +110,7 @@ class TestPackage:
 
     def test_package_with_ecosystem_string(self) -> None:
         """Test Package creation with ecosystem as string (simulating API response)."""
-        package = Package(name="test-package", ecosystem="npm")
+        package = Package(name="test-package", ecosystem="npm")  # type: ignore[arg-type]
         assert package.name == "test-package"
         assert package.ecosystem == Ecosystem.NPM
         assert isinstance(package.ecosystem, Ecosystem)
@@ -72,19 +119,19 @@ class TestPackage:
         """Test Package creation with different ecosystem values."""
         ecosystems = ["pip", "npm", "composer", "maven", "rubygems", "cargo", "go"]
         for eco_str in ecosystems:
-            package = Package(name="test-package", ecosystem=eco_str)
+            package = Package(name="test-package", ecosystem=eco_str)  # type: ignore[arg-type]
             assert isinstance(package.ecosystem, Ecosystem)
             assert package.ecosystem.value == eco_str
 
     def test_package_invalid_ecosystem(self) -> None:
         """Test Package creation with invalid ecosystem raises error."""
         with pytest.raises(ValidationError):
-            Package(name="test-package", ecosystem="invalid-ecosystem")
+            Package(name="test-package", ecosystem="invalid-ecosystem")  # type: ignore[arg-type]
 
     def test_package_equality(self) -> None:
         """Test Package equality comparison."""
         package1 = Package(name="test-package", ecosystem=Ecosystem.NPM)
-        package2 = Package(name="test-package", ecosystem="npm")
+        package2 = Package(name="test-package", ecosystem="npm")  # type: ignore[arg-type]
         package3 = Package(name="test-package", ecosystem=Ecosystem.PIP)
 
         assert package1 == package2
