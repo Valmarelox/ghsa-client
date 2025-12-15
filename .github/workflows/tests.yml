@@ -26,13 +26,14 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies
-        run: uv sync --dev
+        run: |
+          uv python pin ${{ matrix.python-version }}
+          uv sync --dev
 
       - name: Lint with ruff
         run: |
-          uv python pin ${{ matrix.python-version }}
-          uvx ruff format --check .
-          uvx ruff check .
+          uv run ruff format --check .
+          uv run ruff check .
 
       - name: Run tests
-        run: uvx pytest
+        run: uv run pytest
