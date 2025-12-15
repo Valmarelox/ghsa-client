@@ -28,7 +28,8 @@ class TestGHSA_ID:
 
         for valid_id in valid_ids:
             ghsa = GHSA_ID(valid_id)
-            assert str(ghsa) == valid_id.upper()
+            # GHSA_ID normalizes to lowercase
+            assert str(ghsa) == valid_id.lower()
 
     def test_invalid_ghsa_id_format(self) -> None:
         """Test invalid GHSA ID format raises error."""
@@ -122,7 +123,7 @@ class TestPackage:
 
     def test_package_with_ecosystem_string(self) -> None:
         """Test Package creation with ecosystem as string (simulating API response)."""
-        package = Package(name="test-package", ecosystem="npm")
+        package = Package(name="test-package", ecosystem="npm")  # type: ignore[arg-type]
         assert package.name == "test-package"
         assert package.ecosystem == Ecosystem.NPM
         assert isinstance(package.ecosystem, Ecosystem)
@@ -131,19 +132,19 @@ class TestPackage:
         """Test Package creation with different ecosystem values."""
         ecosystems = ["pip", "npm", "composer", "maven", "rubygems", "cargo", "go"]
         for eco_str in ecosystems:
-            package = Package(name="test-package", ecosystem=eco_str)
+            package = Package(name="test-package", ecosystem=eco_str)  # type: ignore[arg-type]
             assert isinstance(package.ecosystem, Ecosystem)
             assert package.ecosystem.value == eco_str
 
     def test_package_invalid_ecosystem(self) -> None:
         """Test Package creation with invalid ecosystem raises error."""
         with pytest.raises(ValidationError):
-            Package(name="test-package", ecosystem="invalid-ecosystem")
+            Package(name="test-package", ecosystem="invalid-ecosystem")  # type: ignore[arg-type]
 
     def test_package_equality(self) -> None:
         """Test Package equality comparison."""
         package1 = Package(name="test-package", ecosystem=Ecosystem.NPM)
-        package2 = Package(name="test-package", ecosystem="npm")
+        package2 = Package(name="test-package", ecosystem="npm")  # type: ignore[arg-type]
         package3 = Package(name="test-package", ecosystem=Ecosystem.PIP)
 
         assert package1 == package2
