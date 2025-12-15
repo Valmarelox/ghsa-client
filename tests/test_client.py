@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from ghsa_client import Ecosystem, GHSA_ID, GHSAClient
+from ghsa_client import GHSA_ID, Ecosystem, GHSAClient
 
 
 class TestGHSAClient:
@@ -193,7 +193,9 @@ class TestGHSAClient:
         http_error.response = MagicMock()
         http_error.response.status_code = 404
 
-        with patch.object(GHSAClient, "_get_with_rate_limit_retry", side_effect=http_error):
+        with patch.object(
+            GHSAClient, "_get_with_rate_limit_retry", side_effect=http_error
+        ):
             client = GHSAClient(logger=logger)
             with pytest.raises(requests.HTTPError):
                 client.get_advisory(GHSA_ID("GHSA-test-1234-5678"))
@@ -217,9 +219,13 @@ class TestGHSAClient:
             }
         ]
 
-        with patch.object(GHSAClient, "_get_with_rate_limit_retry", return_value=mock_response):
+        with patch.object(
+            GHSAClient, "_get_with_rate_limit_retry", return_value=mock_response
+        ):
             client = GHSAClient(logger=logger)
-            advisories = client.search_advisories(ecosystem=Ecosystem.NPM.value, severity="HIGH")
+            advisories = client.search_advisories(
+                ecosystem=Ecosystem.NPM.value, severity="HIGH"
+            )
 
             advisory = next(advisories)
             assert advisory
@@ -244,7 +250,9 @@ class TestGHSAClient:
             with patch.object(client, "session") as mock_session:
                 mock_session.get.return_value = mock_response
 
-                result = client._get_with_rate_limit_retry("https://api.github.com/test")
+                result = client._get_with_rate_limit_retry(
+                    "https://api.github.com/test"
+                )
 
                 assert result == mock_response
                 mock_session.get.assert_called_once()
@@ -264,14 +272,20 @@ class TestGHSAClient:
             result = client.get_ratelimit_remaining()
 
             assert result == mock_response.json.return_value
-            mock_session.get.assert_called_once_with("https://api.github.com/rate_limit")
+            mock_session.get.assert_called_once_with(
+                "https://api.github.com/rate_limit"
+            )
 
     def test_wait_for_ratelimit_no_wait(self) -> None:
         """Test rate limit wait when no wait is needed."""
         logger = logging.getLogger(__name__)
-        mock_ratelimit_data = {"resources": {"core": {"remaining": 100, "reset": 1234567890}}}
+        mock_ratelimit_data = {
+            "resources": {"core": {"remaining": 100, "reset": 1234567890}}
+        }
 
         client = GHSAClient(logger=logger)
-        with patch.object(client, "get_ratelimit_remaining", return_value=mock_ratelimit_data):
+        with patch.object(
+            client, "get_ratelimit_remaining", return_value=mock_ratelimit_data
+        ):
             # Should not raise any exception
             client.wait_for_ratelimit()
