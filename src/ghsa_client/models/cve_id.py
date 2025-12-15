@@ -1,5 +1,6 @@
 import re
-from typing import ClassVar, Optional, Any
+from typing import Any, ClassVar, Optional
+
 from pydantic import BaseModel, field_validator
 
 

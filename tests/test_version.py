@@ -1,7 +1,8 @@
 """Tests for enhanced version handling with PyPI support."""
 
 import pytest
-from ghsa_client.models.version import SemanticVersion, VersionPredicate, VersionFormat
+
+from ghsa_client.models.version import SemanticVersion, VersionFormat, VersionPredicate
 
 
 class TestSemanticVersion:
@@ -217,7 +218,7 @@ class TestVersionPredicate:
 
     def test_version_predicate(self) -> None:
         predicate = VersionPredicate.from_str(">=4.2")
-        assert predicate != None
+        assert predicate is not None
         assert predicate.version == "4.2.0"  # Should be normalized
         assert predicate.semver == SemanticVersion.parse("4.2.0")
 

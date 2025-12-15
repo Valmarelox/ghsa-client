@@ -16,8 +16,8 @@ Main exports:
 from importlib.metadata import version
 
 from .client import GHSAClient
-from .models import Advisory, GHSA_ID, CVE_ID, Vulnerability, CVSS, Ecosystem
 from .exceptions import RateLimitExceeded
+from .models import CVE_ID, CVSS, GHSA_ID, Advisory, Ecosystem, Vulnerability
 
 __version__ = version("ghsa-client")
 __all__ = [

@@ -2,11 +2,12 @@
 
 import re
 from enum import Enum
-from semver import VersionInfo
-from packaging.version import Version as PyPIVersion
 from functools import total_ordering
 from typing import Any, Optional
+
+from packaging.version import Version as PyPIVersion
 from pydantic import BaseModel
+from semver import VersionInfo
 
 
 class VersionFormat(Enum):

@@ -2,13 +2,13 @@
 
 import pytest
 from pydantic import ValidationError
-from ghsa_client import Ecosystem, GHSA_ID, Advisory
+
+from ghsa_client import GHSA_ID, Advisory, Ecosystem
 from ghsa_client.models import (
     CVE_ID,
     InvalidGHSAIDError,
     Package,
     Vulnerability,
-    VersionPredicate,
 )
 
 

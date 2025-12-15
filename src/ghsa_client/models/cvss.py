@@ -1,11 +1,11 @@
-from typing import Dict, Any, Optional
-import enum
-from pydantic import BaseModel, field_validator, model_validator
-
-from ghsa_client.exceptions import InvalidCVSSError
 
 # Python < 3.11 compatibility
 from enum import Enum
+from typing import Any, Optional
+
+from pydantic import BaseModel, field_validator, model_validator
+
+from ghsa_client.exceptions import InvalidCVSSError
 
 
 class StrEnum(str, Enum):
@@ -30,11 +30,11 @@ class CVSS(BaseModel):
     """CVSS vector string representation."""
 
     string: str
-    _parts: Dict[str, str] = {}
+    _parts: dict[str, str] = {}
 
     @model_validator(mode="before")
     @classmethod
-    def validate_cvss_data(cls, data: Any) -> Optional[Dict[str, str]]:
+    def validate_cvss_data(cls, data: Any) -> Optional[dict[str, str]]:
         if isinstance(data, dict):
             # Handle API response format with vector_string and score
             if "vector_string" in data and data["vector_string"]:
@@ -65,12 +65,9 @@ class CVSS(BaseModel):
     def model_post_init(self, __context: Any) -> None:
         self._parts = self._parse()
 
-    def _parse(self) -> Dict[str, str]:
+    def _parse(self) -> dict[str, str]:
         chunks = self.string.split("/")
-        return {
-            x: y
-            for x, y in (tuple(chunk.split(":", 1)) for chunk in chunks if ":" in chunk)
-        }
+        return dict(tuple(chunk.split(":", 1)) for chunk in chunks if ":" in chunk)
 
     def __contains__(self, field: CVSSVector) -> bool:
         return field.value in self._parts

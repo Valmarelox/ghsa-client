@@ -1,10 +1,9 @@
 """Tests for GHSA client."""
 
-import pytest
 import logging
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
-from ghsa_client import GHSAClient, GHSA_ID, RateLimitExceeded
+from ghsa_client import GHSA_ID, GHSAClient
 
 
 class TestGHSAClient:

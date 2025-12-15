@@ -1,13 +1,14 @@
 """Advisory model for GHSA operations."""
 
-from typing import Optional, Any
-from pydantic import BaseModel, field_validator, computed_field, model_validator
+from typing import Any, Optional
 
-from .ghsa_id import GHSA_ID
+from pydantic import BaseModel, computed_field, field_validator, model_validator
+
 from .cve_id import CVE_ID
-from .vulnerability import Vulnerability
 from .cvss import CVSS
+from .ghsa_id import GHSA_ID
 from .package import Package
+from .vulnerability import Vulnerability
 
 
 class NoSourceCodeLocationFound(Exception):

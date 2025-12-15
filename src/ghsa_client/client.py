@@ -1,13 +1,16 @@
 """GitHub Security Advisory (GHSA) API client."""
 
+import logging
 import os
 import re
-import requests
-import logging
+from collections.abc import Generator
 from time import sleep, time
-from typing import Any, Generator, Optional, cast
+from typing import Any, Optional, cast
+
+import requests
+
 from .exceptions import RateLimitExceeded
-from .models import Advisory, GHSA_ID
+from .models import GHSA_ID, Advisory
 
 
 class GHSAClient:
@@ -71,7 +74,7 @@ class GHSAClient:
                     )
                 raise e
 
-        raise RateLimitExceeded(f"Rate limit exceeded for advisory")
+        raise RateLimitExceeded("Rate limit exceeded for advisory")
 
     def get_advisory(self, ghsa_id: GHSA_ID) -> Advisory:
         url = f"{self.base_url}/advisories/{ghsa_id}"
