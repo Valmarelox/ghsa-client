@@ -45,7 +45,7 @@ class Ecosystem(StrEnum):
     def language(self) -> "Language":
         """Get the language for this ecosystem."""
         from auto_exploit.models.etc.language import Language
-        
+
         match self:
             case Ecosystem.NPM:
                 return Language.NODEJS
@@ -62,4 +62,3 @@ class Ecosystem(StrEnum):
             case Ecosystem.CARGO:
                 return Language.RUST
         raise ValueError(f"No language found for ecosystem: {self}")
-

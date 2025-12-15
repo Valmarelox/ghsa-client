@@ -10,12 +10,12 @@ from .vulnerability import Vulnerability
 from .version import VersionPredicate
 
 __all__ = [
-    "GHSA_ID", 
+    "GHSA_ID",
     "InvalidGHSAIDError",
-    "Advisory", 
+    "Advisory",
     "NoSourceCodeLocationFound",
     "CVE_ID",
-    "CVSS", 
+    "CVSS",
     "CVSSVector",
     "Ecosystem",
     "Package",

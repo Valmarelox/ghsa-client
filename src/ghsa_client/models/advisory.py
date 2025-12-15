@@ -12,6 +12,7 @@ from .package import Package
 
 class NoSourceCodeLocationFound(Exception):
     """Raised when source code location is not found in advisory."""
+
     pass
 
 

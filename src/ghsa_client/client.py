@@ -18,11 +18,11 @@ class GHSAClient:
         api_key: Optional[str] = None,
         *,
         blocking_rate_limit: bool = True,
-        logger: logging.Logger = logging.getLogger(__name__), 
+        logger: logging.Logger = logging.getLogger(__name__),
         base_url: str = "https://api.github.com",
     ) -> None:
         """Initialize the GHSA client.
-        
+
         Args:
             api_key: Optional GitHub API key. If provided, enables much higher rate limits
                 (5000 requests/hour vs 60 requests/hour for unauthenticated requests).
@@ -66,7 +66,9 @@ class GHSAClient:
                     sleep(1)
                     continue
                 if e.response.status_code == 422:
-                    self.logger.exception(f"Unprocessable entity error for URL: {url}. body: {e.response.text}")
+                    self.logger.exception(
+                        f"Unprocessable entity error for URL: {url}. body: {e.response.text}"
+                    )
                 raise e
 
         raise RateLimitExceeded(f"Rate limit exceeded for advisory")
@@ -88,7 +90,9 @@ class GHSAClient:
             self.logger.exception(f"Network error retrieving advisory {ghsa_id}")
             raise
 
-    def search_advisories(self, per_page: int = 100, **filters: Any) -> Generator[Advisory, None, None]:
+    def search_advisories(
+        self, per_page: int = 100, **filters: Any
+    ) -> Generator[Advisory, None, None]:
         """Search for advisories with pagination support."""
         url = f"{self.base_url}/advisories"
 
@@ -100,9 +104,9 @@ class GHSAClient:
                 break
 
             yield from (Advisory.model_validate(data) for data in advisories)
-            if 'link' not in response.headers:
+            if "link" not in response.headers:
                 break
-            url_match = re.match(r'<(.*)>; rel="next"', response.headers['link'])
+            url_match = re.match(r'<(.*)>; rel="next"', response.headers["link"])
             if url_match is None:
                 break
             url = url_match.group(1)

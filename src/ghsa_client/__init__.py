@@ -20,4 +20,13 @@ from .models import Advisory, GHSA_ID, CVE_ID, Vulnerability, CVSS, Ecosystem
 from .exceptions import RateLimitExceeded
 
 __version__ = version("ghsa-client")
-__all__ = ["GHSAClient", "Advisory", "GHSA_ID", "CVE_ID", "Vulnerability", "CVSS", "Ecosystem", "RateLimitExceeded"]
+__all__ = [
+    "GHSAClient",
+    "Advisory",
+    "GHSA_ID",
+    "CVE_ID",
+    "Vulnerability",
+    "CVSS",
+    "Ecosystem",
+    "RateLimitExceeded",
+]
