@@ -17,7 +17,7 @@ from importlib.metadata import version
 
 from .client import GHSAClient
 from .exceptions import RateLimitExceeded
-from .models import CVE_ID, CVSS, GHSA_ID, Advisory, Ecosystem, Vulnerability
+from .models import CVE_ID, CVSS, GHSA_ID, Advisory, Ecosystem, Language, Vulnerability
 
 __version__ = version("ghsa-client")
 __all__ = [
@@ -28,5 +28,6 @@ __all__ = [
     "Vulnerability",
     "CVSS",
     "Ecosystem",
+    "Language",
     "RateLimitExceeded",
 ]

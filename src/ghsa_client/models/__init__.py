@@ -5,6 +5,7 @@ from .cve_id import CVE_ID
 from .cvss import CVSS, CVSSVector
 from .ecosystem import Ecosystem
 from .ghsa_id import GHSA_ID, InvalidGHSAIDError
+from .language import Language
 from .package import Package
 from .version import VersionPredicate
 from .vulnerability import Vulnerability
@@ -18,6 +19,7 @@ __all__ = [
     "CVSS",
     "CVSSVector",
     "Ecosystem",
+    "Language",
     "Package",
     "Vulnerability",
     "VersionPredicate",

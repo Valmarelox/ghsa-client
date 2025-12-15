@@ -1,8 +1,6 @@
 from enum import StrEnum
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from auto_exploit.models.etc.language import Language
+from .language import Language
 
 
 class Ecosystem(StrEnum):
@@ -51,10 +49,8 @@ class Ecosystem(StrEnum):
         return f"all_{self.value}"
 
     @property
-    def language(self) -> "Language":
+    def language(self) -> Language:
         """Get the language for this ecosystem."""
-        from auto_exploit.models.etc.language import Language
-
         match self:
             case Ecosystem.NPM:
                 return Language.NODEJS
