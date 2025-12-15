@@ -7,6 +7,7 @@ from .ecosystem import Ecosystem
 
 class Package(BaseModel):
     """Package representation."""
+
     name: str
     ecosystem: Ecosystem
 
@@ -19,4 +20,3 @@ class Package(BaseModel):
         if isinstance(v, str):
             return Ecosystem(v.lower())
         raise ValueError(f"Invalid ecosystem type: {type(v)}")
-

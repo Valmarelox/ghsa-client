@@ -1,13 +1,16 @@
 """GitHub Security Advisory (GHSA) API client."""
 
+import logging
 import os
 import re
-import requests
-import logging
+from collections.abc import Generator
 from time import sleep, time
-from typing import Any, Generator, Optional, cast
+from typing import Any, cast
+
+import requests
+
 from .exceptions import RateLimitExceeded
-from .models import Advisory, GHSA_ID
+from .models import GHSA_ID, Advisory
 
 
 class GHSAClient:
@@ -15,14 +18,14 @@ class GHSAClient:
 
     def __init__(
         self,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         *,
         blocking_rate_limit: bool = True,
-        logger: logging.Logger = logging.getLogger(__name__), 
+        logger: logging.Logger = logging.getLogger(__name__),
         base_url: str = "https://api.github.com",
     ) -> None:
         """Initialize the GHSA client.
-        
+
         Args:
             api_key: Optional GitHub API key. If provided, enables much higher rate limits
                 (5000 requests/hour vs 60 requests/hour for unauthenticated requests).
@@ -66,10 +69,12 @@ class GHSAClient:
                     sleep(1)
                     continue
                 if e.response.status_code == 422:
-                    self.logger.exception(f"Unprocessable entity error for URL: {url}. body: {e.response.text}")
+                    self.logger.exception(
+                        f"Unprocessable entity error for URL: {url}. body: {e.response.text}"
+                    )
                 raise e
 
-        raise RateLimitExceeded(f"Rate limit exceeded for advisory")
+        raise RateLimitExceeded("Rate limit exceeded for advisory")
 
     def get_advisory(self, ghsa_id: GHSA_ID) -> Advisory:
         url = f"{self.base_url}/advisories/{ghsa_id}"
@@ -88,7 +93,9 @@ class GHSAClient:
             self.logger.exception(f"Network error retrieving advisory {ghsa_id}")
             raise
 
-    def search_advisories(self, per_page: int = 100, **filters: Any) -> Generator[Advisory, None, None]:
+    def search_advisories(
+        self, per_page: int = 100, **filters: Any
+    ) -> Generator[Advisory, None, None]:
         """Search for advisories with pagination support."""
         url = f"{self.base_url}/advisories"
 
@@ -100,9 +107,9 @@ class GHSAClient:
                 break
 
             yield from (Advisory.model_validate(data) for data in advisories)
-            if 'link' not in response.headers:
+            if "link" not in response.headers:
                 break
-            url_match = re.match(r'<(.*)>; rel="next"', response.headers['link'])
+            url_match = re.match(r'<(.*)>; rel="next"', response.headers["link"])
             if url_match is None:
                 break
             url = url_match.group(1)

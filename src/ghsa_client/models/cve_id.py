@@ -1,6 +1,6 @@
-
 import re
-from typing import ClassVar, Optional, Any
+from typing import Any, ClassVar
+
 from pydantic import BaseModel, field_validator
 
 
@@ -13,7 +13,7 @@ class CVE_ID(BaseModel):
 
     PATTERN: ClassVar[re.Pattern] = re.compile(r"^CVE-\d{4}-\d{4,}$", re.IGNORECASE)
 
-    def __init__(self, id: Optional[str] = None, **data: Any) -> None:
+    def __init__(self, id: str | None = None, **data: Any) -> None:
         if id is not None:
             data["id"] = id
         elif "id" not in data:
@@ -24,9 +24,7 @@ class CVE_ID(BaseModel):
     @classmethod
     def validate_id(cls, value: Any) -> str:
         if not isinstance(value, str):
-            raise ValueError(
-                f"CVE ID must be a string, got {type(value).__name__}"
-            )
+            raise ValueError(f"CVE ID must be a string, got {type(value).__name__}")
         normalized = value.strip()
         if not normalized:
             raise ValueError("CVE ID cannot be empty")

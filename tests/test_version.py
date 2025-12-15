@@ -1,7 +1,8 @@
 """Tests for enhanced version handling with PyPI support."""
 
 import pytest
-from ghsa_client.models.version import SemanticVersion, VersionPredicate, VersionFormat
+
+from ghsa_client.models.version import SemanticVersion, VersionFormat, VersionPredicate
 
 
 class TestSemanticVersion:
@@ -90,13 +91,13 @@ class TestSemanticVersion:
         # Test semver to PyPI
         version = SemanticVersion.parse("1.0.0-alpha.1")
         assert version.to_pypi() == "1.0.0a1"
-        
+
         version = SemanticVersion.parse("1.0.0-beta.2")
         assert version.to_pypi() == "1.0.0b2"
-        
+
         version = SemanticVersion.parse("1.0.0-rc.3")
         assert version.to_pypi() == "1.0.0rc3"
-        
+
         version = SemanticVersion.parse("1.0.0+build.1")
         assert version.to_pypi() == "1.0.0+build.1"
 
@@ -104,10 +105,10 @@ class TestSemanticVersion:
         """Test conversion to semver format."""
         version = SemanticVersion.parse("1.0.0a1")
         assert version.to_semver() == "1.0.0-alpha.1"
-        
+
         version = SemanticVersion.parse("1.0.0b2")
         assert version.to_semver() == "1.0.0-beta.2"
-        
+
         version = SemanticVersion.parse("1.0.0rc3")
         assert version.to_semver() == "1.0.0-rc.3"
 
@@ -116,7 +117,7 @@ class TestSemanticVersion:
         v1 = SemanticVersion.parse("1.0.0")
         v2 = SemanticVersion.parse("1.0.1")
         v3 = SemanticVersion.parse("1.0.0a1")
-        
+
         assert v1 < v2
         assert v3 < v1
         assert v1 == SemanticVersion.parse("1.0.0")
@@ -125,7 +126,7 @@ class TestSemanticVersion:
         """Test installable version property."""
         version = SemanticVersion.parse("v1.0.0")
         assert version.installable_version == "1.0.0"
-        
+
         version = SemanticVersion.parse("1.0.0")
         assert version.installable_version == "1.0.0"
 
@@ -146,6 +147,7 @@ class TestSemanticVersion:
         version = SemanticVersion.parse("4.2")
         assert version is not None
         assert str(version) == "4.2.0"
+
 
 class TestVersionPredicate:
     """Test enhanced VersionPredicate class."""
@@ -174,7 +176,7 @@ class TestVersionPredicate:
         """Test parsing different equality operators."""
         predicate1 = VersionPredicate.from_str("=1.0.0")
         assert predicate1.operator == "=="
-        
+
         predicate2 = VersionPredicate.from_str("==1.0.0")
         assert predicate2.operator == "=="
 
@@ -204,7 +206,7 @@ class TestVersionPredicate:
         """Test operator to symbol conversion."""
         predicate = VersionPredicate.from_str(">=1.0.0")
         assert predicate.operator_to_symbol() == "__ge__"
-        
+
         predicate = VersionPredicate.from_str("<1.0.0")
         assert predicate.operator_to_symbol() == "__lt__"
 
@@ -216,7 +218,7 @@ class TestVersionPredicate:
 
     def test_version_predicate(self) -> None:
         predicate = VersionPredicate.from_str(">=4.2")
-        assert predicate != None
+        assert predicate is not None
         assert predicate.version == "4.2.0"  # Should be normalized
         assert predicate.semver == SemanticVersion.parse("4.2.0")
 
@@ -229,7 +231,7 @@ class TestVersionIntegration:
         version = SemanticVersion.parse("1.0.0")
         predicate = VersionPredicate.from_str(">=1.0.0")
         assert version.matches_predicate(predicate)
-        
+
         predicate = VersionPredicate.from_str(">1.0.0")
         assert not version.matches_predicate(predicate)
 
@@ -237,7 +239,7 @@ class TestVersionIntegration:
         """Test comparison between different format versions."""
         semver_version = SemanticVersion.parse("1.0.0")
         pypi_version = SemanticVersion.parse("1.0.0")
-        
+
         # Both should be equivalent
         assert semver_version == pypi_version
 
@@ -248,7 +250,7 @@ class TestVersionIntegration:
         assert version.version_format == VersionFormat.PYPI
         assert version.version_info.prerelease == "alpha.1"
         assert version.version_info.build == "dev.1"
-        
+
         # Test conversion
         assert version.to_pypi() == "1.0.0a1.dev1"
         assert version.to_semver() == "1.0.0-alpha.1+dev.1"

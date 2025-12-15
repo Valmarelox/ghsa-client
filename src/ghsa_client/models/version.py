@@ -2,16 +2,17 @@
 
 import re
 from enum import Enum
-from semver import VersionInfo
-from packaging.version import Version as PyPIVersion
 from functools import total_ordering
-from typing import Any, Optional
+from typing import Any
+
+from packaging.version import Version as PyPIVersion
 from pydantic import BaseModel
+from semver import VersionInfo
 
 
 class VersionFormat(Enum):
     """Version format enumeration."""
-    
+
     SEMVER = "semver"
     PYPI = "pypi"
     UNKNOWN = "unknown"
@@ -20,11 +21,11 @@ class VersionFormat(Enum):
 @total_ordering
 class SemanticVersion(BaseModel):
     """Enhanced semantic version supporting both semver and PyPI formats.
-    
-    This class can parse and convert between semantic versioning (semver) and 
+
+    This class can parse and convert between semantic versioning (semver) and
     PyPI versioning (PEP 440) formats. It automatically detects the format
     and provides conversion methods.
-    
+
     Attributes:
         semver_parts: Internal semver representation as a dictionary
         original_version: The original version string that was parsed
@@ -45,13 +46,12 @@ class SemanticVersion(BaseModel):
             else str(self)
         )
 
-
     @classmethod
     def parse(cls, version: str) -> "SemanticVersion":
         """Parse version string using error-driven approach."""
         original_version = version
         prefix = ""
-        
+
         # Extract prefix if present
         if match := re.match("^((?:.+@)?v|V)(.*)", version):
             prefix = match.group(1)
@@ -63,26 +63,28 @@ class SemanticVersion(BaseModel):
                 return parser(version, prefix, original_version)
             except ValueError:
                 continue
-        
+
         raise ValueError(f"Invalid version: {version}")
 
     @classmethod
-    def _parse_pypi(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
+    def _parse_pypi(
+        cls, version: str, prefix: str, original_version: str
+    ) -> "SemanticVersion":
         """Parse PyPI version and convert to semver."""
         pypi_version = PyPIVersion(version)
-        
+
         # Convert PyPI components to semver
         prerelease = cls._convert_pypi_prerelease(pypi_version.pre)
         build = cls._convert_pypi_build(pypi_version.dev, pypi_version.post)
-        
+
         semver_version = VersionInfo(
             major=pypi_version.major,
             minor=pypi_version.minor or 0,
             patch=pypi_version.micro or 0,
             prerelease=prerelease,
-            build=build
+            build=build,
         )
-        
+
         return cls(
             semver_parts=semver_version.to_dict(),
             prefix=prefix,
@@ -91,17 +93,17 @@ class SemanticVersion(BaseModel):
         )
 
     @classmethod
-    def _convert_pypi_prerelease(cls, pre: Optional[tuple]) -> Optional[str]:
+    def _convert_pypi_prerelease(cls, pre: tuple | None) -> str | None:
         """Convert PyPI prerelease to semver format."""
         if not pre:
             return None
-        
+
         pre_type, pre_num = pre
-        pre_type_map = {'a': 'alpha', 'b': 'beta', 'rc': 'rc'}
+        pre_type_map = {"a": "alpha", "b": "beta", "rc": "rc"}
         return f"{pre_type_map.get(pre_type, pre_type)}.{pre_num}"
 
     @classmethod
-    def _convert_pypi_build(cls, dev: Optional[int], post: Optional[int]) -> Optional[str]:
+    def _convert_pypi_build(cls, dev: int | None, post: int | None) -> str | None:
         """Convert PyPI dev/post to semver build metadata."""
         parts = []
         if dev:
@@ -111,7 +113,9 @@ class SemanticVersion(BaseModel):
         return ".".join(parts) if parts else None
 
     @classmethod
-    def _parse_semver(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
+    def _parse_semver(
+        cls, version: str, prefix: str, original_version: str
+    ) -> "SemanticVersion":
         """Parse semver version."""
         semver_version = VersionInfo.parse(version, optional_minor_and_patch=True)
         return cls(
@@ -122,7 +126,9 @@ class SemanticVersion(BaseModel):
         )
 
     @classmethod
-    def _parse_legacy(cls, version: str, prefix: str, original_version: str) -> "SemanticVersion":
+    def _parse_legacy(
+        cls, version: str, prefix: str, original_version: str
+    ) -> "SemanticVersion":
         """Legacy parsing for backward compatibility."""
         # Handle 4-part versions by converting to semver format
         if version.count(".") > 2:
@@ -179,15 +185,17 @@ class SemanticVersion(BaseModel):
         """Convert to PyPI version format."""
         version_info = self.version_info
         pypi_version = f"{version_info.major}.{version_info.minor}.{version_info.patch}"
-        
+
         # Add prerelease
         if version_info.prerelease:
-            pypi_version += self._convert_semver_prerelease_to_pypi(version_info.prerelease)
-        
+            pypi_version += self._convert_semver_prerelease_to_pypi(
+                version_info.prerelease
+            )
+
         # Add build metadata
         if version_info.build:
             pypi_version += self._convert_semver_build_to_pypi(version_info.build)
-        
+
         return pypi_version
 
     def _convert_semver_prerelease_to_pypi(self, prerelease: str) -> str:
@@ -217,10 +225,10 @@ class SemanticVersion(BaseModel):
 
 class VersionPredicate(BaseModel):
     """Version predicate for comparison operations.
-    
+
     Supports both semver and PyPI version formats with automatic detection
     and conversion capabilities.
-    
+
     Attributes:
         operator: Comparison operator (>=, <=, >, <, ==, !=)
         version: Version string to compare against
@@ -267,8 +275,12 @@ class VersionPredicate(BaseModel):
         try:
             normalized_version = SemanticVersion.parse(version_str)
             normalized_version_str = str(normalized_version.version_info)
-            
-            return cls(operator=operator, version=normalized_version_str, version_format=normalized_version.version_format)
+
+            return cls(
+                operator=operator,
+                version=normalized_version_str,
+                version_format=normalized_version.version_format,
+            )
         except ValueError as e:
             raise ValueError(f"Invalid version predicate format: {e}") from e
 
