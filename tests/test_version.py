@@ -148,6 +148,37 @@ class TestSemanticVersion:
         assert version is not None
         assert str(version) == "4.2.0"
 
+    def test_parse_rubygems_version_with_p_suffix(self) -> None:
+        """Test parsing RubyGems versions with 'p' suffix."""
+        version = SemanticVersion.parse("4.25.14p12")
+        assert version.version_format == VersionFormat.RUBYGEMS
+        assert version.version_info.major == 4
+        assert version.version_info.minor == 25
+        assert version.version_info.patch == 14
+        assert version.version_info.build == "p12"
+        assert str(version) == "4.25.14+p12"
+        assert version.original_version == "4.25.14p12"
+
+    def test_parse_rubygems_version_with_p_suffix_single_digit(self) -> None:
+        """Test parsing RubyGems versions with single digit patch."""
+        version = SemanticVersion.parse("1.2.3p1")
+        assert version.version_format == VersionFormat.RUBYGEMS
+        assert version.version_info.major == 1
+        assert version.version_info.minor == 2
+        assert version.version_info.patch == 3
+        assert version.version_info.build == "p1"
+        assert str(version) == "1.2.3+p1"
+
+    def test_parse_rubygems_version_with_p_suffix_multiple_digits(self) -> None:
+        """Test parsing RubyGems versions with multi-digit patch."""
+        version = SemanticVersion.parse("10.20.30p123")
+        assert version.version_format == VersionFormat.RUBYGEMS
+        assert version.version_info.major == 10
+        assert version.version_info.minor == 20
+        assert version.version_info.patch == 30
+        assert version.version_info.build == "p123"
+        assert str(version) == "10.20.30+p123"
+
 
 class TestVersionPredicate:
     """Test enhanced VersionPredicate class."""
@@ -221,6 +252,27 @@ class TestVersionPredicate:
         assert predicate is not None
         assert predicate.version == "4.2.0"  # Should be normalized
         assert predicate.semver == SemanticVersion.parse("4.2.0")
+
+    def test_parse_rubygems_predicate_with_p_suffix(self) -> None:
+        """Test parsing RubyGems version predicates with 'p' suffix."""
+        predicate = VersionPredicate.from_str("< 4.25.14p12")
+        assert predicate.operator == "<"
+        assert predicate.version == "4.25.14+p12"  # Should be normalized to semver
+        assert predicate.version_format == VersionFormat.RUBYGEMS
+
+    def test_parse_rubygems_predicate_without_spaces(self) -> None:
+        """Test parsing RubyGems predicates without spaces."""
+        predicate = VersionPredicate.from_str(">=4.25.14p12")
+        assert predicate.operator == ">="
+        assert predicate.version == "4.25.14+p12"
+        assert predicate.version_format == VersionFormat.RUBYGEMS
+
+    def test_parse_rubygems_predicate_equality(self) -> None:
+        """Test parsing RubyGems equality predicates."""
+        predicate = VersionPredicate.from_str("==4.25.14p12")
+        assert predicate.operator == "=="
+        assert predicate.version == "4.25.14+p12"
+        assert predicate.version_format == VersionFormat.RUBYGEMS
 
 
 class TestVersionIntegration:

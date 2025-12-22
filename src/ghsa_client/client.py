@@ -94,9 +94,16 @@ class GHSAClient:
             raise
 
     def search_advisories(
-        self, per_page: int = 100, **filters: Any
+        self, per_page: int = 100, strict: bool = True, **filters: Any
     ) -> Generator[Advisory, None, None]:
-        """Search for advisories with pagination support."""
+        """Search for advisories with pagination support.
+        
+        Args:
+            per_page: Number of advisories per page (default: 100)
+            strict: If True (default), raises ValidationError on invalid advisories.
+                   If False, skips invalid advisories and continues.
+            **filters: Additional filters to pass to the API (e.g., ecosystem, cwes)
+        """
         url = f"{self.base_url}/advisories"
 
         while True:
@@ -106,7 +113,19 @@ class GHSAClient:
             if not advisories:
                 break
 
-            yield from (Advisory.model_validate(data) for data in advisories)
+            if strict:
+                yield from (Advisory.model_validate(data) for data in advisories)
+            else:
+                # Skip advisories that fail validation
+                for data in advisories:
+                    try:
+                        yield Advisory.model_validate(data)
+                    except Exception as e:
+                        self.logger.warning(
+                            f"Skipping advisory due to validation error: {e}"
+                        )
+                        continue
+
             if "link" not in response.headers:
                 break
             url_match = re.match(r'<(.*)>; rel="next"', response.headers["link"])
