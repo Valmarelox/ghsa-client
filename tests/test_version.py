@@ -179,6 +179,37 @@ class TestSemanticVersion:
         assert version.version_info.build == "p123"
         assert str(version) == "10.20.30+p123"
 
+    def test_parse_ubuntu_version_basic(self) -> None:
+        """Test parsing basic Ubuntu package versions."""
+        version = SemanticVersion.parse("0.8.3ubuntu7.5")
+        assert version.version_format == VersionFormat.UBUNTU
+        assert version.version_info.major == 0
+        assert version.version_info.minor == 8
+        assert version.version_info.patch == 3
+        assert version.version_info.build == "ubuntu7.5"
+        assert str(version) == "0.8.3+ubuntu7.5"
+        assert version.original_version == "0.8.3ubuntu7.5"
+
+    def test_parse_ubuntu_version_with_single_suffix(self) -> None:
+        """Test parsing Ubuntu versions with single digit suffix."""
+        version = SemanticVersion.parse("1.6.5ubuntu0.1")
+        assert version.version_format == VersionFormat.UBUNTU
+        assert version.version_info.major == 1
+        assert version.version_info.minor == 6
+        assert version.version_info.patch == 5
+        assert version.version_info.build == "ubuntu0.1"
+        assert str(version) == "1.6.5+ubuntu0.1"
+
+    def test_parse_ubuntu_version_multiple_parts(self) -> None:
+        """Test parsing Ubuntu versions with multiple part suffix."""
+        version = SemanticVersion.parse("1.9.0ubuntu1.2")
+        assert version.version_format == VersionFormat.UBUNTU
+        assert version.version_info.major == 1
+        assert version.version_info.minor == 9
+        assert version.version_info.patch == 0
+        assert version.version_info.build == "ubuntu1.2"
+        assert str(version) == "1.9.0+ubuntu1.2"
+
 
 class TestVersionPredicate:
     """Test enhanced VersionPredicate class."""
@@ -273,6 +304,27 @@ class TestVersionPredicate:
         assert predicate.operator == "=="
         assert predicate.version == "4.25.14+p12"
         assert predicate.version_format == VersionFormat.RUBYGEMS
+
+    def test_parse_ubuntu_predicate_with_ubuntu_suffix(self) -> None:
+        """Test parsing Ubuntu version predicates with ubuntu suffix."""
+        predicate = VersionPredicate.from_str("< 0.8.3ubuntu7.5")
+        assert predicate.operator == "<"
+        assert predicate.version == "0.8.3+ubuntu7.5"  # Should be normalized to semver
+        assert predicate.version_format == VersionFormat.UBUNTU
+
+    def test_parse_ubuntu_predicate_without_spaces(self) -> None:
+        """Test parsing Ubuntu predicates without spaces."""
+        predicate = VersionPredicate.from_str(">=1.6.5ubuntu0.1")
+        assert predicate.operator == ">="
+        assert predicate.version == "1.6.5+ubuntu0.1"
+        assert predicate.version_format == VersionFormat.UBUNTU
+
+    def test_parse_ubuntu_predicate_equality(self) -> None:
+        """Test parsing Ubuntu equality predicates."""
+        predicate = VersionPredicate.from_str("==1.9.0ubuntu1.2")
+        assert predicate.operator == "=="
+        assert predicate.version == "1.9.0+ubuntu1.2"
+        assert predicate.version_format == VersionFormat.UBUNTU
 
 
 class TestVersionIntegration:

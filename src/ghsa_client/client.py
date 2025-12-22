@@ -97,7 +97,7 @@ class GHSAClient:
         self, per_page: int = 100, strict: bool = True, **filters: Any
     ) -> Generator[Advisory, None, None]:
         """Search for advisories with pagination support.
-        
+
         Args:
             per_page: Number of advisories per page (default: 100)
             strict: If True (default), raises ValidationError on invalid advisories.

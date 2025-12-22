@@ -16,6 +16,7 @@ class VersionFormat(Enum):
     SEMVER = "semver"
     PYPI = "pypi"
     RUBYGEMS = "rubygems"
+    UBUNTU = "ubuntu"
     UNKNOWN = "unknown"
 
 
@@ -59,7 +60,13 @@ class SemanticVersion(BaseModel):
             version = match.group(2)
 
         # Try parsers in order of preference
-        for parser in [cls._parse_semver, cls._parse_pypi, cls._parse_rubygems, cls._parse_legacy]:
+        for parser in [
+            cls._parse_semver,
+            cls._parse_pypi,
+            cls._parse_rubygems,
+            cls._parse_ubuntu,
+            cls._parse_legacy,
+        ]:
             try:
                 return parser(version, prefix, original_version)
             except ValueError:
@@ -143,6 +150,38 @@ class SemanticVersion(BaseModel):
             prefix=prefix,
             original_version=original_version,
             version_format=VersionFormat.RUBYGEMS,
+        )
+
+    @classmethod
+    def _parse_ubuntu(
+        cls, version: str, prefix: str, original_version: str
+    ) -> "SemanticVersion":
+        """Parse Ubuntu package version (e.g., '0.8.3ubuntu7.5', '1.6.5ubuntu0.1')."""
+        # Match versions with 'ubuntu' suffix like "0.8.3ubuntu7.5"
+        match = re.match(r"^(\d+)\.(\d+)\.(\d+)(ubuntu[\d.]+)$", version)
+        if not match:
+            raise ValueError(f"Not an Ubuntu package version: {version}")
+
+        major = int(match.group(1))
+        minor = int(match.group(2))
+        patch = int(match.group(3))
+        ubuntu_suffix = match.group(4)  # e.g., "ubuntu7.5"
+
+        # Convert Ubuntu suffix to semver build metadata
+        # "ubuntu7.5" becomes build metadata "+ubuntu7.5"
+        semver_version = VersionInfo(
+            major=major,
+            minor=minor,
+            patch=patch,
+            prerelease=None,
+            build=ubuntu_suffix,  # "ubuntu7.5" as build metadata
+        )
+
+        return cls(
+            semver_parts=semver_version.to_dict(),
+            prefix=prefix,
+            original_version=original_version,
+            version_format=VersionFormat.UBUNTU,
         )
 
     @classmethod
