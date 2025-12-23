@@ -66,7 +66,12 @@ class CVSS(BaseModel):
 
     def _parse(self) -> dict[str, str]:
         chunks = self.string.split("/")
-        return dict(tuple(chunk.split(":", 1)) for chunk in chunks if ":" in chunk)
+        result: dict[str, str] = {}
+        for chunk in chunks:
+            if ":" in chunk:
+                key, value = chunk.split(":", 1)
+                result[key] = value
+        return result
 
     def __contains__(self, field: CVSSVector) -> bool:
         return field.value in self._parts
