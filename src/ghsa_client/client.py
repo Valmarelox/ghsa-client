@@ -7,7 +7,7 @@ from collections.abc import Generator
 from time import sleep, time
 from typing import Any, cast
 
-import requests
+import httpx
 
 from .exceptions import RateLimitExceeded
 from .models import GHSA_ID, Advisory
@@ -36,10 +36,6 @@ class GHSAClient:
             base_url: Base URL for GitHub API. Defaults to production API.
         """
         self.base_url = base_url
-        self.session = requests.Session()
-        self.logger = logger
-        self.blocking_rate_limit = blocking_rate_limit
-        # Set up headers
         headers = {
             "Accept": "application/vnd.github+json",
             "X-GitHub-Api-Version": "2022-11-28",
@@ -50,11 +46,25 @@ class GHSAClient:
         elif GITHUB_TOKEN := os.getenv("GITHUB_TOKEN"):
             headers["Authorization"] = f"Bearer {GITHUB_TOKEN}"
 
-        self.session.headers.update(headers)
+        self.session = httpx.Client(headers=headers, timeout=30.0)
+        self.logger = logger
+        self.blocking_rate_limit = blocking_rate_limit
+
+    def close(self) -> None:
+        """Close the HTTP client session."""
+        self.session.close()
+
+    def __enter__(self) -> "GHSAClient":
+        """Context manager entry."""
+        return self
+
+    def __exit__(self, *args: Any) -> None:
+        """Context manager exit - close the session."""
+        self.close()
 
     def _get_with_rate_limit_retry(
         self, url: str, *args: Any, **kwargs: Any
-    ) -> requests.Response:
+    ) -> httpx.Response:
         for _ in range(3):
             try:
                 if self.blocking_rate_limit:
@@ -62,7 +72,7 @@ class GHSAClient:
                 response = self.session.get(url, *args, **kwargs)
                 response.raise_for_status()
                 return response
-            except requests.HTTPError as e:
+            except httpx.HTTPStatusError as e:
                 if e.response.status_code == 403 and e.response.text.startswith(
                     "rate limit exceeded"
                 ):
@@ -83,13 +93,13 @@ class GHSAClient:
         try:
             response = self._get_with_rate_limit_retry(url)
             return Advisory.model_validate(response.json())
-        except requests.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             if e.response.status_code == 404:
                 self.logger.exception(f"Advisory {ghsa_id} not found")
             else:
                 self.logger.exception(f"HTTP error retrieving advisory {ghsa_id}: {e}")
             raise
-        except requests.RequestException:
+        except httpx.HTTPError:
             self.logger.exception(f"Network error retrieving advisory {ghsa_id}")
             raise
 

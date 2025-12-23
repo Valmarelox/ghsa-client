@@ -29,8 +29,7 @@ class TestGHSAClient:
         client = GHSAClient(logger=logger, base_url="https://custom.github.com")
         assert client.base_url == "https://custom.github.com"
 
-    @patch("ghsa_client.client.requests.Session.get")
-    def test_get_advisory_success(self, mock_get: MagicMock) -> None:
+    def test_get_advisory_success(self) -> None:
         """Test successful advisory retrieval."""
         logger = logging.getLogger(__name__)
         client = GHSAClient(logger=logger)
@@ -61,18 +60,17 @@ class TestGHSAClient:
             else:
                 return mock_advisory_response
 
-        mock_get.side_effect = side_effect
+        # Patch the instance's session.get method
+        with patch.object(client.session, "get", side_effect=side_effect):
+            # Test
+            ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
+            advisory = client.get_advisory(ghsa_id)
 
-        # Test
-        ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
-        advisory = client.get_advisory(ghsa_id)
+            assert advisory.ghsa_id.id == "GHSA-gq96-8w38-hhj2"
+            assert advisory.summary == "Test advisory"
+            assert advisory.severity == "high"
 
-        assert advisory.ghsa_id.id == "GHSA-gq96-8w38-hhj2"
-        assert advisory.summary == "Test advisory"
-        assert advisory.severity == "high"
-
-    @patch("ghsa_client.client.requests.Session.get")
-    def test_search_advisories_pagination(self, mock_get: MagicMock) -> None:
+    def test_search_advisories_pagination(self) -> None:
         """Test search_advisories with pagination support."""
         logger = logging.getLogger(__name__)
         client = GHSAClient(logger=logger)
@@ -123,19 +121,18 @@ class TestGHSAClient:
             else:
                 return mock_page1_response
 
-        mock_get.side_effect = side_effect
+        # Patch the instance's session.get method
+        with patch.object(client.session, "get", side_effect=side_effect):
+            # Test pagination
+            advisories = list(client.search_advisories(ecosystem="pip", per_page=2))
 
-        # Test pagination
-        advisories = list(client.search_advisories(ecosystem="pip", per_page=2))
+            assert len(advisories) == 2
+            assert advisories[0].ghsa_id.id == "GHSA-gq96-8w38-hhj2"
+            assert advisories[0].summary == "Test advisory 1"
+            assert advisories[1].ghsa_id.id == "GHSA-abc1-2def-3ghi"
+            assert advisories[1].summary == "Test advisory 2"
 
-        assert len(advisories) == 2
-        assert advisories[0].ghsa_id.id == "GHSA-gq96-8w38-hhj2"
-        assert advisories[0].summary == "Test advisory 1"
-        assert advisories[1].ghsa_id.id == "GHSA-abc1-2def-3ghi"
-        assert advisories[1].summary == "Test advisory 2"
-
-    @patch("ghsa_client.client.requests.Session.get")
-    def test_search_advisories_generator_behavior(self, mock_get: MagicMock) -> None:
+    def test_search_advisories_generator_behavior(self) -> None:
         """Test that search_advisories returns a generator."""
         logger = logging.getLogger(__name__)
         client = GHSAClient(logger=logger)
@@ -151,6 +148,7 @@ class TestGHSAClient:
         mock_response = MagicMock()
         mock_response.json.return_value = []
         mock_response.raise_for_status.return_value = None
+        mock_response.headers = {}
 
         def side_effect(*args: object, **kwargs: object) -> MagicMock:
             url = str(args[0]) if args else ""
@@ -159,45 +157,46 @@ class TestGHSAClient:
             else:
                 return mock_response
 
-        mock_get.side_effect = side_effect
+        # Patch the instance's session.get method
+        with patch.object(client.session, "get", side_effect=side_effect):
+            # Test that it returns a generator
+            result = client.search_advisories(ecosystem="pip")
+            assert hasattr(result, "__iter__")
+            assert hasattr(result, "__next__")
 
-        # Test that it returns a generator
-        result = client.search_advisories(ecosystem="pip")
-        assert hasattr(result, "__iter__")
-        assert hasattr(result, "__next__")
-
-        # Test that it yields no results when empty
-        advisories = list(result)
-        assert len(advisories) == 0
+            # Test that it yields no results when empty
+            advisories = list(result)
+            assert len(advisories) == 0
 
     def test_get_specific_advisory_real(self) -> None:
         """Test getting a specific real advisory (GHSA-8r8j-xvfj-36f9)."""
         logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger)
+        with GHSAClient(logger=logger) as client:
+            # Test with a real GHSA ID that was reported as problematic
+            ghsa_id = GHSA_ID("GHSA-8r8j-xvfj-36f9")
+            advisory = client.get_advisory(ghsa_id)
 
-        # Test with a real GHSA ID that was reported as problematic
-        ghsa_id = GHSA_ID("GHSA-8r8j-xvfj-36f9")
-        advisory = client.get_advisory(ghsa_id)
-
-        assert advisory.ghsa_id.id == "GHSA-8r8j-xvfj-36f9"
-        assert advisory.summary == "Code injection in ymlref"
-        assert advisory.severity == "critical"
-        assert advisory.published_at == "2018-12-19T19:25:14Z"
+            assert advisory.ghsa_id.id == "GHSA-8r8j-xvfj-36f9"
+            assert advisory.summary == "Code injection in ymlref"
+            assert advisory.severity == "critical"
+            assert advisory.published_at == "2018-12-19T19:25:14Z"
 
     def test_get_advisory_http_error(self) -> None:
         """Test advisory retrieval with HTTP error."""
-        import requests
+        import httpx
 
         logger = logging.getLogger(__name__)
-        http_error = requests.HTTPError()
-        http_error.response = MagicMock()
-        http_error.response.status_code = 404
+        response = MagicMock()
+        response.status_code = 404
+        http_error = httpx.HTTPStatusError(
+            "Not found", request=MagicMock(), response=response
+        )
 
         with patch.object(
             GHSAClient, "_get_with_rate_limit_retry", side_effect=http_error
         ):
             client = GHSAClient(logger=logger)
-            with pytest.raises(requests.HTTPError):
+            with pytest.raises(httpx.HTTPStatusError):
                 client.get_advisory(GHSA_ID("GHSA-test-1234-5678"))
 
     def test_search_advisories_success(self) -> None:

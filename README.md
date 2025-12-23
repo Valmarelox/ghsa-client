@@ -150,28 +150,6 @@ cve_id = CVE_ID("CVE-2024-12345")
 print(cve_id.id)  # "CVE-2024-12345"
 ```
 
-
-## Error Handling
-
-The client raises specific exceptions for different error conditions:
-
-```python
-from ghsa_client import RateLimitExceeded, GHSAClient
-import requests
-
-try:
-    advisory = client.get_advisory(ghsa_id)
-except requests.HTTPError as e:
-    if e.response.status_code == 404:
-        print("Advisory not found")
-    else:
-        print(f"HTTP error: {e}")
-except RateLimitExceeded as e:
-    print(f"Rate limit exceeded: {e}")
-except requests.RequestException as e:
-    print(f"Network error: {e}")
-```
-
 ## Development
 
 ### Setup
