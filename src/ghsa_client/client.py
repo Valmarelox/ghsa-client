@@ -115,9 +115,10 @@ class GHSAClient:
             **filters: Additional filters to pass to the API (e.g., ecosystem, cwes)
         """
         url = f"{self.base_url}/advisories"
+        params: dict[str, Any] | None = filters
 
         while True:
-            response = self._get_with_rate_limit_retry(url, params=filters)
+            response = self._get_with_rate_limit_retry(url, params=params)
             advisories = response.json()
 
             if not advisories:
@@ -142,6 +143,7 @@ class GHSAClient:
             if url_match is None:
                 break
             url = url_match.group(1)
+            params = None # Pagination URL already includes all params
 
     def get_all_advisories_for_year(self, year: int) -> list[Advisory]:
         """Get all advisories for a given year."""

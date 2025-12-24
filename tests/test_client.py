@@ -171,15 +171,16 @@ class TestGHSAClient:
     def test_get_specific_advisory_real(self) -> None:
         """Test getting a specific real advisory (GHSA-8r8j-xvfj-36f9)."""
         logger = logging.getLogger(__name__)
-        with GHSAClient(logger=logger) as client:
-            # Test with a real GHSA ID that was reported as problematic
-            ghsa_id = GHSA_ID("GHSA-8r8j-xvfj-36f9")
-            advisory = client.get_advisory(ghsa_id)
+        client = GHSAClient(logger=logger)
 
-            assert advisory.ghsa_id.id == "GHSA-8r8j-xvfj-36f9"
-            assert advisory.summary == "Code injection in ymlref"
-            assert advisory.severity == "critical"
-            assert advisory.published_at == "2018-12-19T19:25:14Z"
+        # Test with a real GHSA ID that was reported as problematic
+        ghsa_id = GHSA_ID("GHSA-8r8j-xvfj-36f9")
+        advisory = client.get_advisory(ghsa_id)
+
+        assert advisory.ghsa_id.id == "GHSA-8r8j-xvfj-36f9"
+        assert advisory.summary == "Code injection in ymlref"
+        assert advisory.severity == "critical"
+        assert advisory.published_at == "2018-12-19T19:25:14Z"
 
     def test_get_advisory_http_error(self) -> None:
         """Test advisory retrieval with HTTP error."""
