@@ -12,7 +12,7 @@ class Ecosystem(StrEnum):
     GO = "go"
     COMPOSER = "composer"
     RUBYGEMS = "rubygems"
-    CARGO = "cargo"
+    RUST = "rust"
     NUGET = "nuget"
     ERLANG = "erlang"
     ACTIONS = "actions"
@@ -61,7 +61,7 @@ class Ecosystem(StrEnum):
                 return Language.RUBY
             case Ecosystem.PIP:
                 return Language.PYTHON
-            case Ecosystem.CARGO:
+            case Ecosystem.RUST:
                 return Language.RUST
             case Ecosystem.NUGET:
                 return Language.CSHARP
