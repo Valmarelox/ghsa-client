@@ -4,6 +4,7 @@ A Python client library for the GitHub Security Advisory (GHSA) API, providing s
 
 ## Features
 
+- **Sync and async clients**: `GHSAClient` for synchronous code, `AsyncGHSAClient` for async/await
 - **Type-safe models**: Full Pydantic models for GHSA data structures
 - **Rate limiting**: Built-in rate limit handling and retry logic
 - **Flexible queries**: Search advisories with various filters
@@ -60,6 +61,20 @@ print(advisory.summary)
 print(advisory.severity)
 print(advisory.published_at)
 print(advisory.vulnerabilities)
+```
+
+### Async Client
+
+`AsyncGHSAClient` provides the same API using `httpx.AsyncClient`:
+
+```python
+from ghsa_client import AsyncGHSAClient, GHSA_ID
+
+async with AsyncGHSAClient() as client:
+    advisory = await client.get_advisory(GHSA_ID("GHSA-gq96-8w38-hhj2"))
+
+    async for adv in client.search_advisories(ecosystem="npm"):
+        print(adv.summary)
 ```
 
 ### Searching Advisories
