@@ -1,291 +1,286 @@
-"""Tests for GHSA client."""
+"""Tests for GHSA client (sync and async)."""
 
+import inspect
 import logging
-from unittest.mock import MagicMock, patch
+from contextlib import contextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import httpx
 import pytest
 
-from ghsa_client import GHSA_ID, Ecosystem, GHSAClient
+from ghsa_client import GHSA_ID, AsyncGHSAClient, Ecosystem, GHSAClient
+
+RATE_LIMIT_OK = {"resources": {"core": {"remaining": 5000, "reset": 1234567890}}}
 
 
-class TestGHSAClient:
-    def test_initialization_without_token(self) -> None:
-        """Test client initialization without GitHub token."""
-        logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger)
+# --- Helpers ---
+
+
+async def maybe_await(obj):
+    """Await coroutines, pass through regular values."""
+    if inspect.isawaitable(obj):
+        return await obj
+    return obj
+
+
+async def collect(obj):
+    """Collect sync or async iterable into a list."""
+    if hasattr(obj, "__aiter__"):
+        return [item async for item in obj]
+    return list(obj)
+
+
+def make_response(json_data, headers=None):
+    """Create a mock HTTP response."""
+    resp = MagicMock()
+    resp.json.return_value = json_data
+    resp.raise_for_status.return_value = None
+    resp.headers = headers or {}
+    return resp
+
+
+def url_router(routes, default=None):
+    """Create a side_effect that dispatches by URL substring."""
+
+    def side_effect(*args, **kwargs):
+        url = str(args[0]) if args else ""
+        for pattern, response in routes.items():
+            if pattern in url:
+                return response
+        if default is not None:
+            return default
+        raise ValueError(f"No mock for URL: {url}")
+
+    return side_effect
+
+
+@contextmanager
+def patched_session_get(client, side_effect):
+    """Patch client.session.get, wrapping as async for AsyncGHSAClient."""
+    if isinstance(client, AsyncGHSAClient):
+
+        async def async_se(*args, **kwargs):
+            return side_effect(*args, **kwargs)
+
+        with patch.object(client.session, "get", side_effect=async_se):
+            yield
+    else:
+        with patch.object(client.session, "get", side_effect=side_effect):
+            yield
+
+
+# --- Fixtures ---
+
+
+@pytest.fixture(params=[GHSAClient, AsyncGHSAClient], ids=["sync", "async"])
+def client_cls(request):
+    return request.param
+
+
+@pytest.fixture
+def is_async(client_cls):
+    return client_cls is AsyncGHSAClient
+
+
+@pytest.fixture
+def client(client_cls):
+    return client_cls(logger=logging.getLogger("test"))
+
+
+# --- Tests ---
+
+
+class TestInit:
+    def test_without_token(self, client) -> None:
         assert client.base_url == "https://api.github.com"
         assert "Authorization" not in client.session.headers
 
-    def test_initialization_with_token(self) -> None:
-        """Test client initialization with GitHub token."""
-        logger = logging.getLogger(__name__)
+    def test_with_env_token(self, client_cls) -> None:
         with patch.dict("os.environ", {"GITHUB_TOKEN": "test-token"}):
-            client = GHSAClient(logger=logger)
-            assert client.session.headers["Authorization"] == "Bearer test-token"
+            c = client_cls(logger=logging.getLogger("test"))
+            assert c.session.headers["Authorization"] == "Bearer test-token"
 
-    def test_initialization_with_custom_url(self) -> None:
-        """Test client initialization with custom base URL."""
-        logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger, base_url="https://custom.github.com")
-        assert client.base_url == "https://custom.github.com"
+    def test_with_custom_url(self, client_cls) -> None:
+        c = client_cls(
+            logger=logging.getLogger("test"), base_url="https://custom.github.com"
+        )
+        assert c.base_url == "https://custom.github.com"
 
-    def test_get_advisory_success(self) -> None:
-        """Test successful advisory retrieval."""
-        logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger)
 
-        # Mock rate limit response
-        mock_rate_limit_response = MagicMock()
-        mock_rate_limit_response.json.return_value = {
-            "resources": {"core": {"remaining": 5000, "reset": 1234567890}}
+class TestContextManager:
+    def test_sync(self) -> None:
+        with GHSAClient(logger=logging.getLogger("test")) as c:
+            assert isinstance(c, GHSAClient)
+
+    @pytest.mark.asyncio
+    async def test_async(self) -> None:
+        async with AsyncGHSAClient(logger=logging.getLogger("test")) as c:
+            assert isinstance(c, AsyncGHSAClient)
+
+
+class TestGetAdvisory:
+    @pytest.mark.asyncio
+    async def test_success(self, client) -> None:
+        routes = {
+            "rate_limit": make_response(RATE_LIMIT_OK),
+            "advisories": make_response(
+                {
+                    "ghsa_id": "GHSA-gq96-8w38-hhj2",
+                    "summary": "Test advisory",
+                    "severity": "high",
+                    "published_at": "2024-01-01T00:00:00Z",
+                    "vulnerabilities": [],
+                }
+            ),
         }
-        mock_rate_limit_response.raise_for_status.return_value = None
-
-        # Mock advisory response
-        mock_advisory_response = MagicMock()
-        mock_advisory_response.json.return_value = {
-            "ghsa_id": "GHSA-gq96-8w38-hhj2",
-            "summary": "Test advisory",
-            "severity": "high",
-            "published_at": "2024-01-01T00:00:00Z",
-            "vulnerabilities": [],
-        }
-        mock_advisory_response.raise_for_status.return_value = None
-
-        # Configure mock to return different responses for different URLs
-        def side_effect(*args: object, **kwargs: object) -> MagicMock:
-            url = str(args[0]) if args else ""
-            if "rate_limit" in url:
-                return mock_rate_limit_response
-            else:
-                return mock_advisory_response
-
-        # Patch the instance's session.get method
-        with patch.object(client.session, "get", side_effect=side_effect):
-            # Test
-            ghsa_id = GHSA_ID("GHSA-gq96-8w38-hhj2")
-            advisory = client.get_advisory(ghsa_id)
-
+        with patched_session_get(client, url_router(routes)):
+            advisory = await maybe_await(
+                client.get_advisory(GHSA_ID("GHSA-gq96-8w38-hhj2"))
+            )
             assert advisory.ghsa_id.id == "GHSA-gq96-8w38-hhj2"
             assert advisory.summary == "Test advisory"
             assert advisory.severity == "high"
 
-    def test_search_advisories_pagination(self) -> None:
-        """Test search_advisories with pagination support."""
-        logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger)
+    @pytest.mark.asyncio
+    async def test_http_error(self, client_cls) -> None:
+        resp = MagicMock(status_code=404)
+        error = httpx.HTTPStatusError("Not found", request=MagicMock(), response=resp)
+        with patch.object(client_cls, "_get_with_rate_limit_retry", side_effect=error):
+            c = client_cls(logger=logging.getLogger("test"))
+            with pytest.raises(httpx.HTTPStatusError):
+                await maybe_await(c.get_advisory(GHSA_ID("GHSA-test-1234-5678")))
 
-        # Mock rate limit response
-        mock_rate_limit_response = MagicMock()
-        mock_rate_limit_response.json.return_value = {
-            "resources": {"core": {"remaining": 5000, "reset": 1234567890}}
-        }
-        mock_rate_limit_response.raise_for_status.return_value = None
-
-        # Mock first page response
-        mock_page1_response = MagicMock()
-        mock_page1_response.json.return_value = [
-            {
-                "ghsa_id": "GHSA-gq96-8w38-hhj2",
-                "summary": "Test advisory 1",
-                "severity": "high",
-                "published_at": "2024-01-01T00:00:00Z",
-                "vulnerabilities": [],
-            },
-            {
-                "ghsa_id": "GHSA-abc1-2def-3ghi",
-                "summary": "Test advisory 2",
-                "severity": "medium",
-                "published_at": "2024-01-02T00:00:00Z",
-                "vulnerabilities": [],
-            },
-        ]
-        mock_page1_response.raise_for_status.return_value = None
-        mock_page1_response.headers = {
-            "link": '<https://api.github.com/advisories?page=2>; rel="next"'
-        }
-
-        # Mock second page response (empty)
-        mock_page2_response = MagicMock()
-        mock_page2_response.json.return_value = []
-        mock_page2_response.raise_for_status.return_value = None
-        mock_page2_response.headers = {}
-
-        # Configure mock to return different responses for different URLs
-        def side_effect(*args: object, **kwargs: object) -> MagicMock:
-            url = str(args[0]) if args else ""
-            if "rate_limit" in url:
-                return mock_rate_limit_response
-            elif "page=2" in url:
-                return mock_page2_response
-            else:
-                return mock_page1_response
-
-        # Patch the instance's session.get method
-        with patch.object(client.session, "get", side_effect=side_effect):
-            # Test pagination
-            advisories = list(client.search_advisories(ecosystem="pip", per_page=2))
-
-            assert len(advisories) == 2
-            assert advisories[0].ghsa_id.id == "GHSA-gq96-8w38-hhj2"
-            assert advisories[0].summary == "Test advisory 1"
-            assert advisories[1].ghsa_id.id == "GHSA-abc1-2def-3ghi"
-            assert advisories[1].summary == "Test advisory 2"
-
-    def test_search_advisories_generator_behavior(self) -> None:
-        """Test that search_advisories returns a generator."""
-        logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger)
-
-        # Mock rate limit response
-        mock_rate_limit_response = MagicMock()
-        mock_rate_limit_response.json.return_value = {
-            "resources": {"core": {"remaining": 5000, "reset": 1234567890}}
-        }
-        mock_rate_limit_response.raise_for_status.return_value = None
-
-        # Mock empty response
-        mock_response = MagicMock()
-        mock_response.json.return_value = []
-        mock_response.raise_for_status.return_value = None
-        mock_response.headers = {}
-
-        def side_effect(*args: object, **kwargs: object) -> MagicMock:
-            url = str(args[0]) if args else ""
-            if "rate_limit" in url:
-                return mock_rate_limit_response
-            else:
-                return mock_response
-
-        # Patch the instance's session.get method
-        with patch.object(client.session, "get", side_effect=side_effect):
-            # Test that it returns a generator
-            result = client.search_advisories(ecosystem="pip")
-            assert hasattr(result, "__iter__")
-            assert hasattr(result, "__next__")
-
-            # Test that it yields no results when empty
-            advisories = list(result)
-            assert len(advisories) == 0
-
-    def test_get_specific_advisory_real(self) -> None:
-        """Test getting a specific real advisory (GHSA-8r8j-xvfj-36f9)."""
-        logger = logging.getLogger(__name__)
-        client = GHSAClient(logger=logger)
-
-        # Test with a real GHSA ID that was reported as problematic
-        ghsa_id = GHSA_ID("GHSA-8r8j-xvfj-36f9")
-        advisory = client.get_advisory(ghsa_id)
-
+    @pytest.mark.integration
+    def test_real_advisory(self) -> None:
+        c = GHSAClient(logger=logging.getLogger("test"))
+        advisory = c.get_advisory(GHSA_ID("GHSA-8r8j-xvfj-36f9"))
         assert advisory.ghsa_id.id == "GHSA-8r8j-xvfj-36f9"
         assert advisory.summary == "Code injection in ymlref"
         assert advisory.severity == "critical"
         assert advisory.published_at == "2018-12-19T19:25:14Z"
 
-    def test_get_advisory_http_error(self) -> None:
-        """Test advisory retrieval with HTTP error."""
-        import httpx
 
-        logger = logging.getLogger(__name__)
-        response = MagicMock()
-        response.status_code = 404
-        http_error = httpx.HTTPStatusError(
-            "Not found", request=MagicMock(), response=response
+class TestSearchAdvisories:
+    @pytest.mark.asyncio
+    async def test_pagination(self, client) -> None:
+        page1 = make_response(
+            [
+                {
+                    "ghsa_id": "GHSA-gq96-8w38-hhj2",
+                    "summary": "Advisory 1",
+                    "severity": "high",
+                    "published_at": "2024-01-01T00:00:00Z",
+                    "vulnerabilities": [],
+                },
+                {
+                    "ghsa_id": "GHSA-abc1-2def-3ghi",
+                    "summary": "Advisory 2",
+                    "severity": "medium",
+                    "published_at": "2024-01-02T00:00:00Z",
+                    "vulnerabilities": [],
+                },
+            ],
+            headers={"link": '<https://api.github.com/advisories?page=2>; rel="next"'},
         )
-
-        with patch.object(
-            GHSAClient, "_get_with_rate_limit_retry", side_effect=http_error
-        ):
-            client = GHSAClient(logger=logger)
-            with pytest.raises(httpx.HTTPStatusError):
-                client.get_advisory(GHSA_ID("GHSA-test-1234-5678"))
-
-    def test_search_advisories_success(self) -> None:
-        """Test successful advisory search."""
-        logger = logging.getLogger(__name__)
-
-        mock_response = MagicMock()
-        mock_response.json.return_value = [
-            {
-                "ghsa_id": "GHSA-test-1234-5678",
-                "summary": "Test advisory 1",
-                "severity": "HIGH",
-                "published_at": "2023-01-01T00:00:00Z",
-                "updated_at": "2023-01-01T00:00:00Z",
-                "vulnerabilities": [],
-                "description": "Test description",
-                "cwes": [],
-                "references": [],
-            }
-        ]
-
-        with patch.object(
-            GHSAClient, "_get_with_rate_limit_retry", return_value=mock_response
-        ):
-            client = GHSAClient(logger=logger)
-            advisories = client.search_advisories(
-                ecosystem=Ecosystem.NPM.value, severity="HIGH"
+        routes = {
+            "rate_limit": make_response(RATE_LIMIT_OK),
+            "page=2": make_response([]),
+        }
+        with patched_session_get(client, url_router(routes, default=page1)):
+            advisories = await collect(
+                client.search_advisories(ecosystem="pip", per_page=2)
             )
+            assert len(advisories) == 2
+            assert advisories[0].ghsa_id.id == "GHSA-gq96-8w38-hhj2"
+            assert advisories[1].ghsa_id.id == "GHSA-abc1-2def-3ghi"
 
-            advisory = next(advisories)
-            assert advisory
+    @pytest.mark.asyncio
+    async def test_generator_protocol(self, client, is_async) -> None:
+        routes = {"rate_limit": make_response(RATE_LIMIT_OK)}
+        with patched_session_get(client, url_router(routes, default=make_response([]))):
+            result = client.search_advisories(ecosystem="pip")
+            if is_async:
+                assert hasattr(result, "__aiter__")
+                assert hasattr(result, "__anext__")
+            else:
+                assert hasattr(result, "__iter__")
+                assert hasattr(result, "__next__")
+            assert await collect(result) == []
 
-    def test_get_all_advisories_for_year(self) -> None:
-        """Test getting advisories for a specific year."""
-        logger = logging.getLogger(__name__)
-        with patch.object(GHSAClient, "search_advisories") as mock_search:
-            client = GHSAClient(logger=logger)
-            client.get_all_advisories_for_year(2023)
+    @pytest.mark.asyncio
+    async def test_success(self, client_cls) -> None:
+        mock_resp = make_response(
+            [
+                {
+                    "ghsa_id": "GHSA-test-1234-5678",
+                    "summary": "Test advisory",
+                    "severity": "HIGH",
+                    "published_at": "2023-01-01T00:00:00Z",
+                    "vulnerabilities": [],
+                }
+            ]
+        )
+        with patch.object(
+            client_cls, "_get_with_rate_limit_retry", return_value=mock_resp
+        ):
+            c = client_cls(logger=logging.getLogger("test"))
+            advisories = await collect(
+                c.search_advisories(ecosystem=Ecosystem.NPM.value, severity="HIGH")
+            )
+            assert len(advisories) == 1
 
+
+class TestGetAllAdvisoriesForYear:
+    @pytest.mark.asyncio
+    async def test_calls_search(self, client_cls, is_async) -> None:
+        with patch.object(client_cls, "search_advisories") as mock_search:
+            if is_async:
+
+                async def empty_gen(*a, **kw):
+                    return
+                    yield  # type: ignore[misc]
+
+                mock_search.return_value = empty_gen()
+
+            c = client_cls(logger=logging.getLogger("test"))
+            await maybe_await(c.get_all_advisories_for_year(2023))
             mock_search.assert_called_once_with(published="2023-01-01..2023-12-31")
 
-    def test_rate_limit_retry_success(self) -> None:
-        """Test successful rate limit retry."""
-        logger = logging.getLogger(__name__)
+
+class TestRateLimit:
+    @pytest.mark.asyncio
+    async def test_retry_success(self, client_cls, is_async) -> None:
         mock_response = MagicMock()
         mock_response.raise_for_status.return_value = None
 
-        with patch.object(GHSAClient, "wait_for_ratelimit"):
-            client = GHSAClient(logger=logger)
-            with patch.object(client, "session") as mock_session:
-                mock_session.get.return_value = mock_response
-
-                result = client._get_with_rate_limit_retry(
-                    "https://api.github.com/test"
-                )
-
-                assert result == mock_response
-                mock_session.get.assert_called_once()
-
-    def test_get_ratelimit_remaining(self) -> None:
-        """Test getting rate limit information."""
-        logger = logging.getLogger(__name__)
-        mock_response = MagicMock()
-        mock_response.json.return_value = {
-            "resources": {"core": {"remaining": 42, "reset": 1234567890}}
-        }
-
-        client = GHSAClient(logger=logger)
-        with patch.object(client, "session") as mock_session:
+        with patch.object(client_cls, "wait_for_ratelimit"):
+            c = client_cls(logger=logging.getLogger("test"))
+            mock_session = AsyncMock() if is_async else MagicMock()
             mock_session.get.return_value = mock_response
+            c.session = mock_session
 
-            result = client.get_ratelimit_remaining()
-
-            assert result == mock_response.json.return_value
-            mock_session.get.assert_called_once_with(
-                "https://api.github.com/rate_limit"
+            result = await maybe_await(
+                c._get_with_rate_limit_retry("https://api.github.com/test")
             )
+            assert result == mock_response
+            mock_session.get.assert_called_once()
 
-    def test_wait_for_ratelimit_no_wait(self) -> None:
-        """Test rate limit wait when no wait is needed."""
-        logger = logging.getLogger(__name__)
-        mock_ratelimit_data = {
-            "resources": {"core": {"remaining": 100, "reset": 1234567890}}
-        }
+    @pytest.mark.asyncio
+    async def test_get_remaining(self, client_cls, is_async) -> None:
+        expected = {"resources": {"core": {"remaining": 42, "reset": 1234567890}}}
+        mock_resp = make_response(expected)
 
-        client = GHSAClient(logger=logger)
-        with patch.object(
-            client, "get_ratelimit_remaining", return_value=mock_ratelimit_data
-        ):
-            # Should not raise any exception
-            client.wait_for_ratelimit()
+        c = client_cls(logger=logging.getLogger("test"))
+        mock_session = AsyncMock() if is_async else MagicMock()
+        mock_session.get.return_value = mock_resp
+        c.session = mock_session
+
+        result = await maybe_await(c.get_ratelimit_remaining())
+        assert result == expected
+        mock_session.get.assert_called_once_with("https://api.github.com/rate_limit")
+
+    @pytest.mark.asyncio
+    async def test_wait_no_wait_needed(self, client) -> None:
+        data = {"resources": {"core": {"remaining": 100, "reset": 1234567890}}}
+        with patch.object(client, "get_ratelimit_remaining", return_value=data):
+            await maybe_await(client.wait_for_ratelimit())

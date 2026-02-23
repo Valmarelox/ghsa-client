@@ -117,7 +117,7 @@ class TestPackage:
 
     def test_package_with_different_ecosystems(self) -> None:
         """Test Package creation with different ecosystem values."""
-        ecosystems = ["pip", "npm", "composer", "maven", "rubygems", "cargo", "go"]
+        ecosystems = ["pip", "npm", "composer", "maven", "rubygems", "rust", "go"]
         for eco_str in ecosystems:
             package = Package(name="test-package", ecosystem=eco_str)  # type: ignore[arg-type]
             assert isinstance(package.ecosystem, Ecosystem)
